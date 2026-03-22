@@ -26,7 +26,7 @@ Material:
     m_Ints: []
     m_Floats:
     - _Radius: 5
-    - _Tess: 25
+    - _Tess: 3
     m_Colors:
     - _Center: {r: 0, g: 0, b: 0, a: 0}
     - _Color: {r: 0.22300005, g: 0.6373999, b: 1, a: 1}
