@@ -1,8 +1,8 @@
 using UnityEngine;
 
 /// <summary>
-/// Custom/CircleTessellation 用。円周上の正三角形 1 パッチ（θ=0, 2π/3, 4π/3）。uv.x=頂点 0..2。
-/// アセット: Assets/Create/Meshes/Circle Tessellation Patch
+/// Custom/CircleTessellation 用。1 三角形パッチ: 中心 A、円周 B(θ=0) と C(θ=2π, 同座標で退化可)、弧 BC をテッセレートしてファン状に一周。
+/// uv.x=0 中心 / 1,2 円周。uv.y は未使用。
 /// </summary>
 public static class CircleTessellationPatchMesh
 {
@@ -15,7 +15,7 @@ public static class CircleTessellationPatchMesh
         for (int i = 0; i < VertexCount; i++)
             uvs[i] = new Vector2(i, 0f);
         var indices = new[] { 0, 1, 2 };
-        var m = new Mesh { name = "CircleTessellationEquilateral" };
+        var m = new Mesh { name = "CircleTessellationFanOnePatch" };
         m.vertices = verts;
         m.uv = uvs;
         m.triangles = indices;

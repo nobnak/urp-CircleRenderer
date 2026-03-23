@@ -96,7 +96,7 @@ Mesh:
       offset: 0
       format: 0
       dimension: 0
-    m_DataSize: 60
+    m_DataSize: 120
     _typelessdata: 00000000000000000000000000000000000000000000000000000000000000000000803f000000000000000000000000000000000000004000000000
   m_CompressedMesh:
     m_Vertices:
