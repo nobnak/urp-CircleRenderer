@@ -87,7 +87,7 @@ Shader "Custom/CircleTessellation"
             }
 
             [domain("tri")]
-            [partitioning("fractional_odd")]
+            [partitioning("integer")]
             [outputtopology("triangle_ccw")]
             [patchconstantfunc("PatchConstant")]
             [outputcontrolpoints(3)]
