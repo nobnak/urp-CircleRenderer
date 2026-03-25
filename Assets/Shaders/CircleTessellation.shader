@@ -26,14 +26,24 @@ Shader "Custom/CircleTessellation"
             #pragma hull Hull
             #pragma domain Domain
             #pragma fragment Frag
+            #pragma multi_compile_instancing
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/UnityInstancing.hlsl"
 
-            CBUFFER_START(UnityPerMaterial)
-                float _Radius;
-                float _Tess;
-                float4 _Color;
-            CBUFFER_END
+            #ifndef UNITY_VERTEX_OUTPUT_INSTANCE_ID
+            #if defined(UNITY_INSTANCING_ENABLED)
+            #define UNITY_VERTEX_OUTPUT_INSTANCE_ID uint instanceID : TEXCOORD1;
+            #else
+            #define UNITY_VERTEX_OUTPUT_INSTANCE_ID
+            #endif
+            #endif
+
+            UNITY_INSTANCING_BUFFER_START(UnityPerMaterial)
+                UNITY_DEFINE_INSTANCED_PROP(float, _Radius)
+                UNITY_DEFINE_INSTANCED_PROP(float, _Tess)
+                UNITY_DEFINE_INSTANCED_PROP(float4, _Color)
+            UNITY_INSTANCING_BUFFER_END(UnityPerMaterial)
 
             // 1 パッチのみ: 中心はオブジェクト空間原点固定。A=原点, B=θ=0, C=θ=2π（B/C 同座標で退化可）。弧は 0→2π。
             static const float kTwoPi = 6.28318530718;
@@ -45,40 +55,47 @@ Shader "Custom/CircleTessellation"
                 float dist = distance(GetCameraPositionWS(), centerWS);
                 float tanHalfFov = abs(rcp(UNITY_MATRIX_P._m11));
                 float denom = max(log(1.0 + dist * tanHalfFov), 1e-5);
-                float baseTess = clamp(_Tess, 1.0, 64.0);
+                float tess = UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _Tess);
+                float baseTess = clamp(tess, 1.0, 64.0);
                 return clamp(baseTess / denom, 3.0, 64.0);
             }
 
             struct Attributes
             {
                 float2 uv : TEXCOORD0;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
             struct ControlPoint
             {
                 float4 positionOS : INTERNALTESSPOS;
                 float2 sectorAngles : TEXCOORD0;
+                UNITY_VERTEX_OUTPUT_INSTANCE_ID
             };
 
             struct Varyings
             {
                 float4 positionCS : SV_POSITION;
+                UNITY_VERTEX_OUTPUT_INSTANCE_ID
             };
 
             // uv.x: 0=中心A, 1=B(θ=0), 2=C(θ=2π, 位置は B と同じで可)
             ControlPoint Vert(Attributes input)
             {
+                UNITY_SETUP_INSTANCE_ID(input);
                 uint corner = (uint)input.uv.x;
                 float theta0 = 0.0;
                 float theta1 = kTwoPi;
+                float radius = UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _Radius);
                 float3 p;
                 if (corner == 0u)
                     p = float3(0.0, 0.0, 0.0);
                 else
-                    p = float3(_Radius, 0.0, 0.0);
+                    p = float3(radius, 0.0, 0.0);
                 ControlPoint o;
                 o.positionOS = float4(p, 1.0);
                 o.sectorAngles = float2(theta0, theta1);
+                UNITY_TRANSFER_INSTANCE_ID(input, o);
                 return o;
             }
 
@@ -91,6 +108,7 @@ Shader "Custom/CircleTessellation"
             // edge[0]=u==0 → V1–V2（弧 BC）のみ分割。径方向 A–B, A–C は 1。
             TessellationFactors PatchConstant(InputPatch<ControlPoint, 3> patch)
             {
+                UNITY_SETUP_INSTANCE_ID(patch[0]);
                 TessellationFactors f;
                 float arc = ArcTessFromViewScale();
                 f.edge[0] = arc;
@@ -114,17 +132,22 @@ Shader "Custom/CircleTessellation"
             [domain("tri")]
             Varyings Domain(TessellationFactors factors, OutputPatch<ControlPoint, 3> patch, float3 bary : SV_DomainLocation)
             {
-                float r = lerp(_Radius, 0, bary.x);
+                UNITY_SETUP_INSTANCE_ID(patch[0]);
+                float radius = UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _Radius);
+                float r = lerp(radius, 0, bary.x);
                 float theta = lerp(0, kTwoPi, bary.z);
                 float3 posOS = float3(r * cos(theta), r * sin(theta), 0.0);
                 Varyings o;
                 o.positionCS = TransformObjectToHClip(posOS);
+                UNITY_TRANSFER_INSTANCE_ID(patch[0], o);
                 return o;
             }
 
             half4 Frag(Varyings input) : SV_Target
             {
-                return (half4)_Color;
+                UNITY_SETUP_INSTANCE_ID(input);
+                float4 color = UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _Color);
+                return (half4)color;
             }
             ENDHLSL
         }
