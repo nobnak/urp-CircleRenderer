@@ -38,6 +38,17 @@ Shader "Custom/CircleTessellation"
             // 1 パッチのみ: 中心はオブジェクト空間原点固定。A=原点, B=θ=0, C=θ=2π（B/C 同座標で退化可）。弧は 0→2π。
             static const float kTwoPi = 6.28318530718;
 
+            // 弧の分割数 = _Tess / log(1 + dist * tan(half vertical fov))。線形より遠距離で分割が落ちにくい。dist=カメラ〜円中心。下限 3。
+            float ArcTessFromViewScale()
+            {
+                float3 centerWS = TransformObjectToWorld(float3(0.0, 0.0, 0.0));
+                float dist = distance(GetCameraPositionWS(), centerWS);
+                float tanHalfFov = abs(rcp(UNITY_MATRIX_P._m11));
+                float denom = max(log(1.0 + dist * tanHalfFov), 1e-5);
+                float baseTess = clamp(_Tess, 1.0, 64.0);
+                return clamp(baseTess / denom, 3.0, 64.0);
+            }
+
             struct Attributes
             {
                 float2 uv : TEXCOORD0;
@@ -81,7 +92,7 @@ Shader "Custom/CircleTessellation"
             TessellationFactors PatchConstant(InputPatch<ControlPoint, 3> patch)
             {
                 TessellationFactors f;
-                float arc = clamp(_Tess, 1.0, 64.0);
+                float arc = ArcTessFromViewScale();
                 f.edge[0] = arc;
                 f.edge[1] = 1.0;
                 f.edge[2] = 1.0;
