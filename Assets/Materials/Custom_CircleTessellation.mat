@@ -25,8 +25,9 @@ Material:
     m_TexEnvs: []
     m_Ints: []
     m_Floats:
+    - _DebugVis: 1
     - _Radius: 5
-    - _Tess: 6
+    - _Tess: 5
     m_Colors:
     - _Color: {r: 0.22300005, g: 0.6373999, b: 1, a: 1}
   m_BuildTextureStacks: []
