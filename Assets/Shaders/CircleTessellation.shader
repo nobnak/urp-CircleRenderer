@@ -3,7 +3,7 @@ Shader "Custom/CircleTessellation"
     Properties
     {
         _Radius ("Radius", Float) = 0.5
-        [IntRange] _Tess ("Arc Tessellation (BC)", Range(1, 64)) = 16
+        _Tess ("Arc Tessellation (BC)", Range(1, 64)) = 16
         _Color ("Color", Color) = (1, 1, 1, 1)
     }
     SubShader
@@ -57,7 +57,7 @@ Shader "Custom/CircleTessellation"
                 float denom = max(log(1.0 + dist * tanHalfFov), 1e-5);
                 float tess = UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _Tess);
                 float baseTess = clamp(tess, 1.0, 64.0);
-                return clamp(baseTess / denom, 3.0, 64.0);
+                return clamp(3 * baseTess / denom, 3.0, 64.0);
             }
 
             struct Attributes
