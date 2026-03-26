@@ -5,6 +5,7 @@ Shader "Custom/CircleTessellation"
         _Radius ("Radius", Float) = 0.5
         [IntRange] _Tess ("Arc Tessellation (BC)", Range(1, 64)) = 16
         _Color ("Color", Color) = (1, 1, 1, 1)
+        [Enum(Off,0,Barycentric,1)] _DebugVis ("Debug: Patch Barycentric (R=A,G=B,B=C)", Float) = 0
     }
     SubShader
     {
@@ -33,6 +34,7 @@ Shader "Custom/CircleTessellation"
                 float _Radius;
                 float _Tess;
                 float4 _Color;
+                float _DebugVis;
             CBUFFER_END
 
             // 1 パッチのみ: 中心はオブジェクト空間原点固定。A=原点, B=θ=0, C=θ=2π（B/C 同座標で退化可）。弧は 0→2π。
@@ -52,6 +54,7 @@ Shader "Custom/CircleTessellation"
             struct Varyings
             {
                 float4 positionCS : SV_POSITION;
+                float3 patchBary : TEXCOORD0;
             };
 
             // uv.x: 0=中心A, 1=B(θ=0), 2=C(θ=2π, 位置は B と同じで可)
@@ -103,16 +106,21 @@ Shader "Custom/CircleTessellation"
             [domain("tri")]
             Varyings Domain(TessellationFactors factors, OutputPatch<ControlPoint, 3> patch, float3 bary : SV_DomainLocation)
             {
-                float r = lerp(_Radius, 0, bary.x);
-                float theta = lerp(0, kTwoPi, bary.z);
-                float3 posOS = float3(r * cos(theta), r * sin(theta), 0.0);
+                float ring = saturate(bary.y + bary.z);
+                float r = _Radius * ring;
+                float thetaT = bary.z / max(ring, 1e-6);
+                float theta = thetaT * kTwoPi;
+                float3 posOS = lerp(r * float3(cos(theta), sin(theta), 0.0), 0.0, bary.x);
                 Varyings o;
                 o.positionCS = TransformObjectToHClip(posOS);
+                o.patchBary = bary;
                 return o;
             }
 
             half4 Frag(Varyings input) : SV_Target
             {
+                if (_DebugVis > 0.5h)
+                    return half4(saturate(input.patchBary), 1.0h);
                 return (half4)_Color;
             }
             ENDHLSL
