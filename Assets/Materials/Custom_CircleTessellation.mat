@@ -25,6 +25,7 @@ Material:
     m_TexEnvs: []
     m_Ints: []
     m_Floats:
+    - _DebugVis: 1
     - _Radius: 5
     - _Tess: 26
     m_Colors:

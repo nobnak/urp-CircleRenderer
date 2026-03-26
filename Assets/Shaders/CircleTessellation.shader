@@ -5,6 +5,7 @@ Shader "Custom/CircleTessellation"
         _Radius ("Radius", Float) = 0.5
         _Tess ("Arc Tessellation (BC)", Range(1, 64)) = 16
         _Color ("Color", Color) = (1, 1, 1, 1)
+        [Enum(Off,0,Barycentric,1)] _DebugVis ("Debug: Patch Barycentric (R=A,G=B,B=C)", Float) = 0
     }
     SubShader
     {
@@ -43,6 +44,7 @@ Shader "Custom/CircleTessellation"
                 UNITY_DEFINE_INSTANCED_PROP(float, _Radius)
                 UNITY_DEFINE_INSTANCED_PROP(float, _Tess)
                 UNITY_DEFINE_INSTANCED_PROP(float4, _Color)
+                UNITY_DEFINE_INSTANCED_PROP(float, _DebugVis)
             UNITY_INSTANCING_BUFFER_END(UnityPerMaterial)
 
             // 1 パッチのみ: 中心はオブジェクト空間原点固定。A=原点, B=θ=0, C=θ=2π（B/C 同座標で退化可）。弧は 0→2π。
@@ -76,6 +78,7 @@ Shader "Custom/CircleTessellation"
             struct Varyings
             {
                 float4 positionCS : SV_POSITION;
+                float3 patchBary : TEXCOORD0;
                 UNITY_VERTEX_OUTPUT_INSTANCE_ID
             };
 
@@ -134,11 +137,14 @@ Shader "Custom/CircleTessellation"
             {
                 UNITY_SETUP_INSTANCE_ID(patch[0]);
                 float radius = UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _Radius);
-                float r = lerp(radius, 0, bary.x);
-                float theta = lerp(0, kTwoPi, bary.z);
-                float3 posOS = float3(r * cos(theta), r * sin(theta), 0.0);
+                float ring = saturate(bary.y + bary.z);
+                float r = radius * ring;
+                float thetaT = bary.z / max(ring, 1e-6);
+                float theta = thetaT * kTwoPi;
+                float3 posOS = lerp(r * float3(cos(theta), sin(theta), 0.0), 0.0, bary.x);
                 Varyings o;
                 o.positionCS = TransformObjectToHClip(posOS);
+                o.patchBary = bary;
                 UNITY_TRANSFER_INSTANCE_ID(patch[0], o);
                 return o;
             }
@@ -147,6 +153,9 @@ Shader "Custom/CircleTessellation"
             {
                 UNITY_SETUP_INSTANCE_ID(input);
                 float4 color = UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _Color);
+                float debugVis = UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _DebugVis);
+                if (debugVis > 0.5h)
+                    return half4(saturate(input.patchBary), 1.0h);
                 return (half4)color;
             }
             ENDHLSL
