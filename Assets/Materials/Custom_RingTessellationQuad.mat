@@ -25,10 +25,10 @@ Material:
     m_TexEnvs: []
     m_Ints: []
     m_Floats:
-    - _Radius: 5
-    - _RingWidth: 0.1
+    - _Radius: 4
+    - _RingWidth: 1
     - _Tess: 16
     m_Colors:
-    - _Color: {r: 1, g: 1, b: 1, a: 1}
+    - _Color: {r: 0.2532427, g: 0.6698113, b: 0.18009077, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
