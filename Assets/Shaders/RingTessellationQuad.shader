@@ -47,12 +47,11 @@ Shader "Custom/RingTessellationQuad"
                 UNITY_DEFINE_INSTANCED_PROP(float4, _Color)
             UNITY_INSTANCING_BUFFER_END(UnityPerMaterial)
 
-            // 1 quad パッチ: 制御点 V0=(0,0), V1=(1,0), V2=(1,1), V3=(0,1)（u,v は Domain の SV_DomainLocation と一致）。
-            // リング: θ = u·2π, r = lerp(rIn, rOut, v)。内周・外周は edge[0], edge[2] で高分割。
-            // u=0 と u=1 で θ が 0/2π となり INTERNALTESSPOS が同一になると、ゼロ長辺扱いで内周分割が潰れ扇状に外周だけ残ることがある。
-            // CP 用に u=1 側だけわずかにずらし非退化にする（Domain はそのまま全周）。
+            // 3 quad パッチ: 入力メッシュは内周 r=1・外周 r=2 の円上。Vert で rIn/rOut にスケールし Domain と一致させる。
             static const float kTwoPi = 6.28318530718;
-            static const float kPatchUEps = 1e-4;
+            static const float kSectorSpan = kTwoPi / 3.0;
+            static const float kInputRIn = 1.0;
+            static const float kInputROut = 2.0;
 
             float ArcTessFromViewScale()
             {
@@ -73,24 +72,26 @@ Shader "Custom/RingTessellationQuad"
                 rOut = max(r + 0.5 * w, rIn + 1e-6);
             }
 
-            float3 RingPositionOS(float u, float v)
+            float3 RingPositionOS(float theta, float v)
             {
                 float rIn, rOut;
                 RingRadii(rIn, rOut);
-                float theta = u * kTwoPi;
                 float rr = lerp(rIn, rOut, v);
-                return float3(rr * cos(theta), rr * sin(theta), 0.0);
+                return float3(rr * cos(theta), -rr * sin(theta), 0.0);
             }
 
             struct Attributes
             {
+                float3 positionOS : POSITION;
                 float2 uv : TEXCOORD0;
+                float2 sectorPack : TEXCOORD1;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
             struct ControlPoint
             {
                 float4 positionOS : INTERNALTESSPOS;
+                float2 arcAngles : TEXCOORD0;
                 UNITY_VERTEX_OUTPUT_INSTANCE_ID
             };
 
@@ -103,11 +104,16 @@ Shader "Custom/RingTessellationQuad"
             ControlPoint Vert(Attributes input)
             {
                 UNITY_SETUP_INSTANCE_ID(input);
-                float u = saturate(input.uv.x);
                 float v = saturate(input.uv.y);
-                float uCp = (u >= 1.0 - 1e-6) ? (1.0 - kPatchUEps) : u;
+                float sector = round(input.sectorPack.x);
+                float theta0 = sector * kSectorSpan;
+                float theta1 = theta0 + kSectorSpan;
+                float rIn, rOut;
+                RingRadii(rIn, rOut);
+                float radialScale = lerp(rIn / kInputRIn, rOut / kInputROut, v);
                 ControlPoint o;
-                o.positionOS = float4(RingPositionOS(uCp, v), 1.0);
+                o.positionOS = float4(input.positionOS.xy * radialScale, 0.0, 1.0);
+                o.arcAngles = float2(theta0, theta1);
                 UNITY_TRANSFER_INSTANCE_ID(input, o);
                 return o;
             }
@@ -118,16 +124,17 @@ Shader "Custom/RingTessellationQuad"
                 float inside[2] : SV_InsideTessFactor;
             };
 
-            // edge[0]: V0–V1 (v=0, 内周), edge[1]: V1–V2, edge[2]: V2–V3 (v=1, 外周), edge[3]: V3–V0
+            // Quad の SV_TessFactor は CP 順ではなく UV の辺: [0]=u==0, [1]=v==0, [2]=u==1, [3]=v==1 (MSDN)。
+            // v==0 が内弧 (V0–V1)、v==1 が外弧 (V2–V3)。u==0 / u==1 は径方向 (V3–V0, V1–V2)。
             TessellationFactors PatchConstant(InputPatch<ControlPoint, 4> patch)
             {
                 UNITY_SETUP_INSTANCE_ID(patch[0]);
                 TessellationFactors f;
                 float arc = ArcTessFromViewScale();
-                f.edge[0] = arc;
-                f.edge[1] = 1.0;
-                f.edge[2] = arc;
-                f.edge[3] = 1.0;
+                f.edge[0] = 1.0;
+                f.edge[1] = arc;
+                f.edge[2] = 1.0;
+                f.edge[3] = arc;
                 f.inside[0] = arc;
                 f.inside[1] = 2.0;
                 return f;
@@ -141,7 +148,9 @@ Shader "Custom/RingTessellationQuad"
             [maxtessfactor(64.0)]
             ControlPoint Hull(InputPatch<ControlPoint, 4> patch, uint id : SV_OutputControlPointID)
             {
-                return patch[id];
+                ControlPoint o = patch[id];
+                o.arcAngles = patch[0].arcAngles;
+                return o;
             }
 
             [domain("quad")]
@@ -150,7 +159,9 @@ Shader "Custom/RingTessellationQuad"
                 UNITY_SETUP_INSTANCE_ID(patch[0]);
                 float u = uv.x;
                 float v = uv.y;
-                float3 posOS = RingPositionOS(u, v);
+                float2 angles = patch[0].arcAngles;
+                float theta = lerp(angles.x, angles.y, u);
+                float3 posOS = RingPositionOS(theta, v);
                 Varyings o;
                 o.positionCS = TransformObjectToHClip(posOS);
                 UNITY_TRANSFER_INSTANCE_ID(patch[0], o);

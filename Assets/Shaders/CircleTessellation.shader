@@ -47,8 +47,9 @@ Shader "Custom/CircleTessellation"
                 UNITY_DEFINE_INSTANCED_PROP(float, _DebugVis)
             UNITY_INSTANCING_BUFFER_END(UnityPerMaterial)
 
-            // 1 パッチのみ: 中心はオブジェクト空間原点固定。A=原点, B=θ=0, C=θ=2π（B/C 同座標で退化可）。弧は 0→2π。
+            // 3 セクタ: 各パッチは A=中心, B/C=円周上の隣接点。退化シームを避けて円を構成する。
             static const float kTwoPi = 6.28318530718;
+            static const float kSectorSpan = kTwoPi / 3.0;
 
             // 弧の分割数 = _Tess / log(1 + dist * tan(half vertical fov))。線形より遠距離で分割が落ちにくい。dist=カメラ〜円中心。下限 3。
             float ArcTessFromViewScale()
@@ -82,19 +83,22 @@ Shader "Custom/CircleTessellation"
                 UNITY_VERTEX_OUTPUT_INSTANCE_ID
             };
 
-            // uv.x: 0=中心A, 1=B(θ=0), 2=C(θ=2π, 位置は B と同じで可)
+            // uv.x: 0=中心A, 1=B, 2=C / uv.y: セクタ index(0..2)
             ControlPoint Vert(Attributes input)
             {
                 UNITY_SETUP_INSTANCE_ID(input);
                 uint corner = (uint)input.uv.x;
-                float theta0 = 0.0;
-                float theta1 = kTwoPi;
+                float sector = round(input.uv.y);
+                float theta0 = sector * kSectorSpan;
+                float theta1 = theta0 + kSectorSpan;
                 float radius = UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _Radius);
                 float3 p;
                 if (corner == 0u)
                     p = float3(0.0, 0.0, 0.0);
+                else if (corner == 1u)
+                    p = radius * float3(cos(theta0), sin(theta0), 0.0);
                 else
-                    p = float3(radius, 0.0, 0.0);
+                    p = radius * float3(cos(theta1), sin(theta1), 0.0);
                 ControlPoint o;
                 o.positionOS = float4(p, 1.0);
                 o.sectorAngles = float2(theta0, theta1);
@@ -108,7 +112,7 @@ Shader "Custom/CircleTessellation"
                 float inside : SV_InsideTessFactor;
             };
 
-            // edge[0]=u==0 → V1–V2（弧 BC）のみ分割。径方向 A–B, A–C は 1。
+            // edge[0]=u==0 の弧 BC を分割。径方向 A–B, A–C は 1。
             TessellationFactors PatchConstant(InputPatch<ControlPoint, 3> patch)
             {
                 UNITY_SETUP_INSTANCE_ID(patch[0]);
@@ -138,10 +142,10 @@ Shader "Custom/CircleTessellation"
                 UNITY_SETUP_INSTANCE_ID(patch[0]);
                 float radius = UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _Radius);
                 float ring = saturate(bary.y + bary.z);
-                float r = radius * ring;
+                float2 sectorAngles = patch[0].sectorAngles;
                 float thetaT = bary.z / max(ring, 1e-6);
-                float theta = thetaT * kTwoPi;
-                float3 posOS = lerp(r * float3(cos(theta), sin(theta), 0.0), 0.0, bary.x);
+                float theta = lerp(sectorAngles.x, sectorAngles.y, thetaT);
+                float3 posOS = radius * ring * float3(cos(theta), sin(theta), 0.0);
                 Varyings o;
                 o.positionCS = TransformObjectToHClip(posOS);
                 o.patchBary = bary;
