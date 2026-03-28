@@ -5,7 +5,9 @@ Shader "Custom/RingTessellationQuad"
         _Radius ("Radius (centerline)", Float) = 0.5
         _RingWidth ("Ring Width", Float) = 0.1
         _Tess ("Arc Tessellation", Range(1, 64)) = 16
+        [Enum(Fixed,0,Log Distance,1)] _TessMode ("Tessellation Mode", Float) = 1
         _Color ("Color", Color) = (1, 1, 1, 1)
+        [Enum(Off,0,Barycentric,1)] _DebugVis ("Debug: Quad patch weights (3 corners)", Float) = 0
     }
     SubShader
     {
@@ -44,7 +46,9 @@ Shader "Custom/RingTessellationQuad"
                 UNITY_DEFINE_INSTANCED_PROP(float, _Radius)
                 UNITY_DEFINE_INSTANCED_PROP(float, _RingWidth)
                 UNITY_DEFINE_INSTANCED_PROP(float, _Tess)
+                UNITY_DEFINE_INSTANCED_PROP(float, _TessMode)
                 UNITY_DEFINE_INSTANCED_PROP(float4, _Color)
+                UNITY_DEFINE_INSTANCED_PROP(float, _DebugVis)
             UNITY_INSTANCING_BUFFER_END(UnityPerMaterial)
 
             // 3 quad パッチ: 入力メッシュは内周 r=1・外周 r=2 の円上。Vert で rIn/rOut にスケールし Domain と一致させる。
@@ -53,14 +57,14 @@ Shader "Custom/RingTessellationQuad"
             static const float kInputRIn = 1.0;
             static const float kInputROut = 2.0;
 
-            float ArcTessFromViewScale()
+            float RingArcTessellation(float baseTess, float mode)
             {
+                baseTess = clamp(baseTess, 1.0, 64.0);
+                if (mode < 0.5)
+                    return baseTess;
                 float3 centerWS = TransformObjectToWorld(float3(0.0, 0.0, 0.0));
                 float dist = distance(GetCameraPositionWS(), centerWS);
-                float tanHalfFov = abs(rcp(UNITY_MATRIX_P._m11));
-                float denom = max(log(1.0 + dist * tanHalfFov), 1e-5);
-                float tess = UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _Tess);
-                float baseTess = clamp(tess, 1.0, 64.0);
+                float denom = max(log(1.0 + dist), 1e-5);
                 return clamp(3.0 * baseTess / denom, 3.0, 64.0);
             }
 
@@ -98,6 +102,7 @@ Shader "Custom/RingTessellationQuad"
             struct Varyings
             {
                 float4 positionCS : SV_POSITION;
+                float3 patchBary : TEXCOORD0;
                 UNITY_VERTEX_OUTPUT_INSTANCE_ID
             };
 
@@ -130,7 +135,9 @@ Shader "Custom/RingTessellationQuad"
             {
                 UNITY_SETUP_INSTANCE_ID(patch[0]);
                 TessellationFactors f;
-                float arc = ArcTessFromViewScale();
+                float tess = UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _Tess);
+                float mode = UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _TessMode);
+                float arc = RingArcTessellation(tess, mode);
                 f.edge[0] = 1.0;
                 f.edge[1] = arc;
                 f.edge[2] = 1.0;
@@ -164,6 +171,10 @@ Shader "Custom/RingTessellationQuad"
                 float3 posOS = RingPositionOS(theta, v);
                 Varyings o;
                 o.positionCS = TransformObjectToHClip(posOS);
+                float w00 = (1.0 - u) * (1.0 - v);
+                float w10 = u * (1.0 - v);
+                float w11 = u * v;
+                o.patchBary = float3(w00, w10, w11);
                 UNITY_TRANSFER_INSTANCE_ID(patch[0], o);
                 return o;
             }
@@ -172,6 +183,9 @@ Shader "Custom/RingTessellationQuad"
             {
                 UNITY_SETUP_INSTANCE_ID(input);
                 float4 color = UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _Color);
+                float debugVis = UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _DebugVis);
+                if (debugVis > 0.5)
+                    return half4(saturate(input.patchBary), 1.0);
                 return (half4)color;
             }
             ENDHLSL

@@ -47,6 +47,8 @@ Shader "Custom/RingTessellationQuadInstanced"
                 float radius;
                 float ringWidth;
                 float tess;
+                float tessMode;
+                float debugVis;
                 float pad;
                 float4 color;
             };
@@ -66,13 +68,14 @@ Shader "Custom/RingTessellationQuadInstanced"
                 rOut = max(r + 0.5 * w, rIn + 1e-6);
             }
 
-            float ArcTessFromViewScale(RingInstanceData inst)
+            float RingArcTessellation(float baseTess, float mode)
             {
+                baseTess = clamp(baseTess, 1.0, 64.0);
+                if (mode < 0.5)
+                    return baseTess;
                 float3 centerWS = TransformObjectToWorld(float3(0.0, 0.0, 0.0));
                 float dist = distance(GetCameraPositionWS(), centerWS);
-                float tanHalfFov = abs(rcp(UNITY_MATRIX_P._m11));
-                float denom = max(log(1.0 + dist * tanHalfFov), 1e-5);
-                float baseTess = clamp(inst.tess, 1.0, 64.0);
+                float denom = max(log(1.0 + dist), 1e-5);
                 return clamp(3.0 * baseTess / denom, 3.0, 64.0);
             }
 
@@ -102,6 +105,7 @@ Shader "Custom/RingTessellationQuadInstanced"
             struct Varyings
             {
                 float4 positionCS : SV_POSITION;
+                float3 patchBary : TEXCOORD0;
                 UNITY_VERTEX_OUTPUT_INSTANCE_ID
             };
 
@@ -136,7 +140,7 @@ Shader "Custom/RingTessellationQuadInstanced"
                 uint iid = UNITY_GET_INSTANCE_ID(patch[0]);
                 RingInstanceData inst = LoadInstance(iid);
                 TessellationFactors f;
-                float arc = ArcTessFromViewScale(inst);
+                float arc = RingArcTessellation(inst.tess, inst.tessMode);
                 f.edge[0] = 1.0;
                 f.edge[1] = arc;
                 f.edge[2] = 1.0;
@@ -172,6 +176,10 @@ Shader "Custom/RingTessellationQuadInstanced"
                 float3 posOS = RingPositionOS(inst, theta, v);
                 Varyings o;
                 o.positionCS = TransformObjectToHClip(posOS);
+                float w00 = (1.0 - u) * (1.0 - v);
+                float w10 = u * (1.0 - v);
+                float w11 = u * v;
+                o.patchBary = float3(w00, w10, w11);
                 UNITY_TRANSFER_INSTANCE_ID(patch[0], o);
                 return o;
             }
@@ -181,6 +189,8 @@ Shader "Custom/RingTessellationQuadInstanced"
                 UNITY_SETUP_INSTANCE_ID(input);
                 uint iid = UNITY_GET_INSTANCE_ID(input);
                 RingInstanceData inst = LoadInstance(iid);
+                if (inst.debugVis > 0.5)
+                    return half4(saturate(input.patchBary), 1.0);
                 return (half4)inst.color;
             }
             ENDHLSL
