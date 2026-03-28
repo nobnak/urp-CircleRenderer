@@ -165,7 +165,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9f4c1e3a6d0f5c8b9e2a7d4f1c3b6e0a, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::RingTessellationInstancedGroup
+  m_EditorClassIdentifier: Assembly-CSharp::RingInstancedGroup
   _renderer: {fileID: 42037914}
 --- !u!114 &42037914
 MonoBehaviour:
@@ -178,7 +178,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 0a5d2f4b7e1a6d9c0f3b8e5a2d4c7f1b, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::RingTessellationInstancedRenderer
+  m_EditorClassIdentifier: Assembly-CSharp::RingInstancedRenderer
   _material: {fileID: 2100000, guid: d3b7e1c508c64e1a9a2f6d0e4b8a3c5d, type: 2}
   _mesh: {fileID: 4300000, guid: 678103f80f69fe84595f53fa966d563e, type: 2}
   _castShadows: 0
@@ -227,11 +227,13 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8e3b0d2f5c9e4b7a8d1f4c6e9b2a5d8f, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::RingTessellationInstance
+  m_EditorClassIdentifier: Assembly-CSharp::RingInstance
   _group: {fileID: 42037913}
   _radius: 3
   _ringWidth: 0.5
-  _tess: 16
+  _tess: 17.5
+  _tessMode: 1
+  _debugVis: 0
   _color: {r: 0.61176467, g: 0.1372549, b: 1, a: 1}
 --- !u!1 &271712555
 GameObject:
@@ -276,11 +278,13 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8e3b0d2f5c9e4b7a8d1f4c6e9b2a5d8f, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::RingTessellationInstance
+  m_EditorClassIdentifier: Assembly-CSharp::RingInstance
   _group: {fileID: 42037913}
   _radius: 4
-  _ringWidth: 0.5
-  _tess: 16
+  _ringWidth: 2.22
+  _tess: 9.1
+  _tessMode: 1
+  _debugVis: 1
   _color: {r: 0.13800001, g: 0.68393344, b: 1, a: 1}
 --- !u!1 &330585543
 GameObject:

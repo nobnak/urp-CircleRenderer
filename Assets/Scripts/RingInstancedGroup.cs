@@ -2,22 +2,22 @@ using System.Collections.Generic;
 using UnityEngine;
 
 [ExecuteAlways]
-public sealed class RingTessellationInstancedGroup : MonoBehaviour
+public sealed class RingInstancedGroup : MonoBehaviour
 {
-    [SerializeField] RingTessellationInstancedRenderer _renderer;
+    [SerializeField] RingInstancedRenderer _renderer;
 
-    readonly List<RingTessellationInstance> _instances = new List<RingTessellationInstance>();
+    readonly List<RingInstance> _instances = new List<RingInstance>();
     [System.NonSerialized] Matrix4x4[] _matrices;
-    [System.NonSerialized] RingTessellationInstanceData[] _data;
+    [System.NonSerialized] RingInstanceData[] _data;
 
-    public void RegisterInstance(RingTessellationInstance inst)
+    public void RegisterInstance(RingInstance inst)
     {
         if (inst == null || _instances.Contains(inst))
             return;
         _instances.Add(inst);
     }
 
-    public void UnregisterInstance(RingTessellationInstance inst)
+    public void UnregisterInstance(RingInstance inst)
     {
         if (inst == null)
             return;
@@ -69,7 +69,7 @@ public sealed class RingTessellationInstancedGroup : MonoBehaviour
         else
             System.Array.Resize(ref _matrices, newCap);
         if (_data == null)
-            _data = new RingTessellationInstanceData[newCap];
+            _data = new RingInstanceData[newCap];
         else
             System.Array.Resize(ref _data, newCap);
     }

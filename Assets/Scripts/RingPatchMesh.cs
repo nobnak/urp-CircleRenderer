@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public static class RingTessellationQuadPatchMesh
+public static class RingPatchMesh
 {
     public const int SectorCount = 3;
     public const int VertexCount = SectorCount * 4;
@@ -40,7 +40,7 @@ public static class RingTessellationQuadPatchMesh
             indices[b + 3] = b + 3;
         }
 
-        var m = new Mesh { name = "RingTessellationQuadThreePatches" };
+        var m = new Mesh { name = "RingQuadThreePatches" };
         m.vertices = verts;
         m.uv = uvs;
         m.uv2 = uv2;

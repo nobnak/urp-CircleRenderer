@@ -1,20 +1,20 @@
 using System.Runtime.InteropServices;
 using UnityEngine;
 
-public enum RingTessellationTessMode
+public enum RingTessMode
 {
     Fixed = 0,
     LogDistance = 1,
 }
 
-public enum RingTessellationDebugVis
+public enum RingDebugVis
 {
     Off = 0,
     PatchBarycentric = 1,
 }
 
 [StructLayout(LayoutKind.Sequential)]
-public struct RingTessellationInstanceData
+public struct RingInstanceData
 {
     public float radius;
     public float ringWidth;
@@ -24,5 +24,5 @@ public struct RingTessellationInstanceData
     public float pad;
     public Color color;
 
-    public static int Stride => Marshal.SizeOf<RingTessellationInstanceData>();
+    public static int Stride => Marshal.SizeOf<RingInstanceData>();
 }

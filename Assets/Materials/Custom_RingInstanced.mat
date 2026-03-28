@@ -7,14 +7,14 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: Custom_RingTessellationQuad
-  m_Shader: {fileID: 4800000, guid: 2ca02e5629b65864b9f094b0cc66c309, type: 3}
+  m_Name: Custom_RingInstanced
+  m_Shader: {fileID: 4800000, guid: e4c8f2a619d54f2a8b3c7d1e5f9a0b1c, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
   m_InvalidKeywords: []
   m_LightmapFlags: 4
-  m_EnableInstancingVariants: 0
+  m_EnableInstancingVariants: 1
   m_DoubleSidedGI: 0
   m_CustomRenderQueue: -1
   stringTagMap: {}
@@ -24,13 +24,7 @@ Material:
     serializedVersion: 3
     m_TexEnvs: []
     m_Ints: []
-    m_Floats:
-    - _Radius: 4
-    - _RingWidth: 1
-    - _Tess: 16
-    - _TessMode: 1
-    - _DebugVis: 0
-    m_Colors:
-    - _Color: {r: 0.2532427, g: 0.6698113, b: 0.18009077, a: 1}
+    m_Floats: []
+    m_Colors: []
   m_BuildTextureStacks: []
   m_AllowLocking: 1

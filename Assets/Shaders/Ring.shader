@@ -1,6 +1,14 @@
-Shader "Custom/RingTessellationQuadInstanced"
+Shader "Custom/Ring"
 {
-    Properties {}
+    Properties
+    {
+        _Radius ("Radius (centerline)", Float) = 0.5
+        _RingWidth ("Ring Width", Float) = 0.1
+        _Tess ("Arc Tessellation", Range(1, 64)) = 16
+        [Enum(Fixed,0,Log Distance,1)] _TessMode ("Tessellation Mode", Float) = 1
+        _Color ("Color", Color) = (1, 1, 1, 1)
+        [Enum(Off,0,Barycentric,1)] _DebugVis ("Debug: Quad patch weights (3 corners)", Float) = 0
+    }
     SubShader
     {
         Tags
@@ -33,42 +41,23 @@ Shader "Custom/RingTessellationQuadInstanced"
             #define UNITY_VERTEX_OUTPUT_INSTANCE_ID
             #endif
             #endif
-            #ifndef UNITY_GET_INSTANCE_ID
-            #define UNITY_GET_INSTANCE_ID(input) 0u
-            #endif
 
+            UNITY_INSTANCING_BUFFER_START(UnityPerMaterial)
+                UNITY_DEFINE_INSTANCED_PROP(float, _Radius)
+                UNITY_DEFINE_INSTANCED_PROP(float, _RingWidth)
+                UNITY_DEFINE_INSTANCED_PROP(float, _Tess)
+                UNITY_DEFINE_INSTANCED_PROP(float, _TessMode)
+                UNITY_DEFINE_INSTANCED_PROP(float4, _Color)
+                UNITY_DEFINE_INSTANCED_PROP(float, _DebugVis)
+            UNITY_INSTANCING_BUFFER_END(UnityPerMaterial)
+
+            // 3 quad パッチ: 入力メッシュは内周 r=1・外周 r=2 の円上。Vert で rIn/rOut にスケールし Domain と一致させる。
             static const float kTwoPi = 6.28318530718;
             static const float kSectorSpan = kTwoPi / 3.0;
             static const float kInputRIn = 1.0;
             static const float kInputROut = 2.0;
 
-            struct RingInstanceData
-            {
-                float radius;
-                float ringWidth;
-                float tess;
-                float tessMode;
-                float debugVis;
-                float pad;
-                float4 color;
-            };
-
-            StructuredBuffer<RingInstanceData> _RingInstances;
-
-            RingInstanceData LoadInstance(uint iid)
-            {
-                return _RingInstances[iid];
-            }
-
-            void RingRadii(RingInstanceData inst, out float rIn, out float rOut)
-            {
-                float r = inst.radius;
-                float w = max(inst.ringWidth, 1e-6);
-                rIn = max(r - 0.5 * w, 1e-6);
-                rOut = max(r + 0.5 * w, rIn + 1e-6);
-            }
-
-            float RingArcTessellation(float baseTess, float mode)
+            float RingArcTess(float baseTess, float mode)
             {
                 baseTess = clamp(baseTess, 1.0, 64.0);
                 if (mode < 0.5)
@@ -79,10 +68,18 @@ Shader "Custom/RingTessellationQuadInstanced"
                 return clamp(3.0 * baseTess / denom, 3.0, 64.0);
             }
 
-            float3 RingPositionOS(RingInstanceData inst, float theta, float v)
+            void RingRadii(out float rIn, out float rOut)
+            {
+                float r = UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _Radius);
+                float w = max(UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _RingWidth), 1e-6);
+                rIn = max(r - 0.5 * w, 1e-6);
+                rOut = max(r + 0.5 * w, rIn + 1e-6);
+            }
+
+            float3 RingPositionOS(float theta, float v)
             {
                 float rIn, rOut;
-                RingRadii(inst, rIn, rOut);
+                RingRadii(rIn, rOut);
                 float rr = lerp(rIn, rOut, v);
                 return float3(rr * cos(theta), -rr * sin(theta), 0.0);
             }
@@ -112,14 +109,12 @@ Shader "Custom/RingTessellationQuadInstanced"
             ControlPoint Vert(Attributes input)
             {
                 UNITY_SETUP_INSTANCE_ID(input);
-                uint iid = UNITY_GET_INSTANCE_ID(input);
-                RingInstanceData inst = LoadInstance(iid);
                 float v = saturate(input.uv.y);
                 float sector = round(input.sectorPack.x);
                 float theta0 = sector * kSectorSpan;
                 float theta1 = theta0 + kSectorSpan;
                 float rIn, rOut;
-                RingRadii(inst, rIn, rOut);
+                RingRadii(rIn, rOut);
                 float radialScale = lerp(rIn / kInputRIn, rOut / kInputROut, v);
                 ControlPoint o;
                 o.positionOS = float4(input.positionOS.xy * radialScale, 0.0, 1.0);
@@ -134,13 +129,15 @@ Shader "Custom/RingTessellationQuadInstanced"
                 float inside[2] : SV_InsideTessFactor;
             };
 
+            // Quad の SV_TessFactor は CP 順ではなく UV の辺: [0]=u==0, [1]=v==0, [2]=u==1, [3]=v==1 (MSDN)。
+            // v==0 が内弧 (V0–V1)、v==1 が外弧 (V2–V3)。u==0 / u==1 は径方向 (V3–V0, V1–V2)。
             TessellationFactors PatchConstant(InputPatch<ControlPoint, 4> patch)
             {
                 UNITY_SETUP_INSTANCE_ID(patch[0]);
-                uint iid = UNITY_GET_INSTANCE_ID(patch[0]);
-                RingInstanceData inst = LoadInstance(iid);
                 TessellationFactors f;
-                float arc = RingArcTessellation(inst.tess, inst.tessMode);
+                float tess = UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _Tess);
+                float mode = UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _TessMode);
+                float arc = RingArcTess(tess, mode);
                 f.edge[0] = 1.0;
                 f.edge[1] = arc;
                 f.edge[2] = 1.0;
@@ -167,13 +164,11 @@ Shader "Custom/RingTessellationQuadInstanced"
             Varyings Domain(TessellationFactors factors, OutputPatch<ControlPoint, 4> patch, float2 uv : SV_DomainLocation)
             {
                 UNITY_SETUP_INSTANCE_ID(patch[0]);
-                uint iid = UNITY_GET_INSTANCE_ID(patch[0]);
-                RingInstanceData inst = LoadInstance(iid);
                 float u = uv.x;
                 float v = uv.y;
                 float2 angles = patch[0].arcAngles;
                 float theta = lerp(angles.x, angles.y, u);
-                float3 posOS = RingPositionOS(inst, theta, v);
+                float3 posOS = RingPositionOS(theta, v);
                 Varyings o;
                 o.positionCS = TransformObjectToHClip(posOS);
                 float w00 = (1.0 - u) * (1.0 - v);
@@ -187,11 +182,11 @@ Shader "Custom/RingTessellationQuadInstanced"
             half4 Frag(Varyings input) : SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(input);
-                uint iid = UNITY_GET_INSTANCE_ID(input);
-                RingInstanceData inst = LoadInstance(iid);
-                if (inst.debugVis > 0.5)
+                float4 color = UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _Color);
+                float debugVis = UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _DebugVis);
+                if (debugVis > 0.5)
                     return half4(saturate(input.patchBary), 1.0);
-                return (half4)inst.color;
+                return (half4)color;
             }
             ENDHLSL
         }

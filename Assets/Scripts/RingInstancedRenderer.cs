@@ -3,7 +3,7 @@ using UnityEngine.Rendering;
 
 [ExecuteAlways]
 [DefaultExecutionOrder(1000)]
-public sealed class RingTessellationInstancedRenderer : MonoBehaviour
+public sealed class RingInstancedRenderer : MonoBehaviour
 {
     const int kMaxInstancesPerDraw = 1023;
 
@@ -16,7 +16,7 @@ public sealed class RingTessellationInstancedRenderer : MonoBehaviour
     [SerializeField] int _layer;
 
     [System.NonSerialized] Matrix4x4[] _accumMatrices;
-    [System.NonSerialized] RingTessellationInstanceData[] _accumData;
+    [System.NonSerialized] RingInstanceData[] _accumData;
     [System.NonSerialized] int _accumCount;
 
     ComputeBuffer _instanceBuffer;
@@ -25,7 +25,7 @@ public sealed class RingTessellationInstancedRenderer : MonoBehaviour
     Matrix4x4[] _matrixBatch;
     MaterialPropertyBlock _mpb;
     Matrix4x4[] _matrixScratch;
-    RingTessellationInstanceData[] _dataScratch;
+    RingInstanceData[] _dataScratch;
     bool _instancingWarnIssued;
 
     public Material Material
@@ -44,7 +44,7 @@ public sealed class RingTessellationInstancedRenderer : MonoBehaviour
 
     public void ClearFrameInstances() => _accumCount = 0;
 
-    public void AddInstance(Matrix4x4 matrix, RingTessellationInstanceData data)
+    public void AddInstance(Matrix4x4 matrix, RingInstanceData data)
     {
         EnsureAccumCapacity(_accumCount + 1);
         _accumMatrices[_accumCount] = matrix;
@@ -52,7 +52,7 @@ public sealed class RingTessellationInstancedRenderer : MonoBehaviour
         _accumCount++;
     }
 
-    public void AddInstances(Matrix4x4[] matrices, RingTessellationInstanceData[] data, int count, int sourceStart = 0)
+    public void AddInstances(Matrix4x4[] matrices, RingInstanceData[] data, int count, int sourceStart = 0)
     {
         if (count <= 0)
             return;
@@ -114,7 +114,7 @@ public sealed class RingTessellationInstancedRenderer : MonoBehaviour
         _instancingWarnIssued = false;
         _accumCount = 0;
         if (_mesh == null)
-            _mesh = RingTessellationQuadPatchMesh.Create();
+            _mesh = RingPatchMesh.Create();
         _mpb ??= new MaterialPropertyBlock();
     }
 
@@ -151,14 +151,14 @@ public sealed class RingTessellationInstancedRenderer : MonoBehaviour
         else
             System.Array.Resize(ref _accumMatrices, newCap);
         if (_accumData == null)
-            _accumData = new RingTessellationInstanceData[newCap];
+            _accumData = new RingInstanceData[newCap];
         else
             System.Array.Resize(ref _accumData, newCap);
     }
 
     void EnsureGpuBuffer(int elementCount)
     {
-        int stride = RingTessellationInstanceData.Stride;
+        int stride = RingInstanceData.Stride;
         int cap = AlignedDrawBatchCapacity(elementCount);
         if (_instanceBuffer != null && _instanceBuffer.count == cap && _instanceBufferStride == stride)
             return;
@@ -193,12 +193,12 @@ public sealed class RingTessellationInstancedRenderer : MonoBehaviour
         if (!_instancingWarnIssued)
         {
             _instancingWarnIssued = true;
-            Debug.LogWarning($"{nameof(RingTessellationInstancedRenderer)}: material must have GPU Instancing enabled.", this);
+            Debug.LogWarning($"{nameof(RingInstancedRenderer)}: material must have GPU Instancing enabled.", this);
         }
         return false;
     }
 
-    public void Draw(Matrix4x4[] matrices, RingTessellationInstanceData[] instances, int count, int layer = 0)
+    public void Draw(Matrix4x4[] matrices, RingInstanceData[] instances, int count, int layer = 0)
     {
         if (_material == null || _mesh == null || count <= 0)
             return;
@@ -231,12 +231,12 @@ public sealed class RingTessellationInstancedRenderer : MonoBehaviour
         }
     }
 
-    public void DrawOne(Matrix4x4 matrix, RingTessellationInstanceData instance, int layer = 0)
+    public void DrawOne(Matrix4x4 matrix, RingInstanceData instance, int layer = 0)
     {
         if (_matrixScratch == null)
             _matrixScratch = new Matrix4x4[1];
         if (_dataScratch == null)
-            _dataScratch = new RingTessellationInstanceData[1];
+            _dataScratch = new RingInstanceData[1];
         _matrixScratch[0] = matrix;
         _dataScratch[0] = instance;
         Draw(_matrixScratch, _dataScratch, 1, layer);
