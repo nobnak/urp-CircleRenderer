@@ -1,4 +1,4 @@
-Shader "Custom/CircleTessellationInstanced"
+Shader "Custom/CircleInstanced"
 {
     Properties {}
     SubShader
@@ -37,7 +37,7 @@ Shader "Custom/CircleTessellationInstanced"
             #define UNITY_GET_INSTANCE_ID(input) 0u
             #endif
 
-            #include "Assets/Shaders/Includes/CircleTessellationShared.hlsl"
+            #include "Assets/Shaders/Includes/CircleShared.hlsl"
 
             struct CircleInstanceData
             {
@@ -71,7 +71,7 @@ Shader "Custom/CircleTessellationInstanced"
                 UNITY_SETUP_INSTANCE_ID(patch[0]);
                 uint iid = UNITY_GET_INSTANCE_ID(patch[0]);
                 CircleInstanceData inst = LoadInstance(iid);
-                float arc = ComputeArcTessellation(inst.tess, inst.tessMode);
+                float arc = ComputeArcTess(inst.tess, inst.tessMode);
                 return BuildPatchFactors(arc);
             }
 

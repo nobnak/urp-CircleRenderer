@@ -1,4 +1,4 @@
-Shader "Custom/CircleTessellation"
+Shader "Custom/Circle"
 {
     Properties
     {
@@ -48,7 +48,7 @@ Shader "Custom/CircleTessellation"
                 UNITY_DEFINE_INSTANCED_PROP(float4, _Color)
                 UNITY_DEFINE_INSTANCED_PROP(float, _DebugVis)
             UNITY_INSTANCING_BUFFER_END(UnityPerMaterial)
-            #include "Assets/Shaders/Includes/CircleTessellationShared.hlsl"
+            #include "Assets/Shaders/Includes/CircleShared.hlsl"
 
             // uv.x: 0=中心A, 1=B, 2=C / uv.y: セクタ index(0..2)
             ControlPoint Vert(Attributes input)
@@ -66,7 +66,7 @@ Shader "Custom/CircleTessellation"
                 UNITY_SETUP_INSTANCE_ID(patch[0]);
                 float tess = UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _Tess);
                 float mode = UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _TessMode);
-                float arc = ComputeArcTessellation(tess, mode);
+                float arc = ComputeArcTess(tess, mode);
                 return BuildPatchFactors(arc);
             }
 

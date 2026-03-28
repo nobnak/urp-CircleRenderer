@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public static class CircleTessellationPatchMesh
+public static class CirclePatchMesh
 {
     public const int SectorCount = 3;
     public const int VertexCount = SectorCount * 3;
@@ -31,7 +31,7 @@ public static class CircleTessellationPatchMesh
             indices[v + 2] = v + 2;
         }
 
-        var m = new Mesh { name = "CircleTessellationFanThreeSectors" };
+        var m = new Mesh { name = "CircleFanThreeSectors" };
         m.vertices = verts;
         m.uv = uvs;
         m.triangles = indices;

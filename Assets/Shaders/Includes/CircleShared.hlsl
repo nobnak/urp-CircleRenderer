@@ -1,5 +1,5 @@
-#ifndef CIRCLE_TESSELLATION_SHARED_INCLUDED
-#define CIRCLE_TESSELLATION_SHARED_INCLUDED
+#ifndef CIRCLE_SHARED_INCLUDED
+#define CIRCLE_SHARED_INCLUDED
 
 // 3 sectors: each patch uses A=center, B/C=adjacent points on the circumference.
 static const float kTwoPi = 6.28318530718;
@@ -40,7 +40,7 @@ struct TessellationFactors
     float inside : SV_InsideTessFactor;
 };
 
-float ComputeArcTessellation(float baseTess, float mode)
+float ComputeArcTess(float baseTess, float mode)
 {
     baseTess = clamp(baseTess, 1.0, 64.0);
     if (mode < 0.5)

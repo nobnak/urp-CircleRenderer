@@ -7,8 +7,8 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: Custom_CircleTessellation
-  m_Shader: {fileID: 4800000, guid: 81490b0a45df3614caf0d12dfdd74edf, type: 3}
+  m_Name: Custom_CircleInstanced
+  m_Shader: {fileID: 4800000, guid: 46140a9c881cfea428abf5db3b71bc53, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
@@ -24,12 +24,7 @@ Material:
     serializedVersion: 3
     m_TexEnvs: []
     m_Ints: []
-    m_Floats:
-    - _DebugVis: 0
-    - _Radius: 5
-    - _Tess: 9.4
-    - _TessMode: 1
-    m_Colors:
-    - _Color: {r: 0.22300005, g: 0.6373999, b: 1, a: 1}
+    m_Floats: []
+    m_Colors: []
   m_BuildTextureStacks: []
   m_AllowLocking: 1

@@ -2,23 +2,23 @@ using System.Collections.Generic;
 using UnityEngine;
 
 [ExecuteAlways]
-public sealed class CircleTessellationInstancedGroup : MonoBehaviour
+public sealed class CircleInstancedGroup : MonoBehaviour
 {
-    [SerializeField] CircleTessellationInstancedRenderer _renderer;
+    [SerializeField] CircleInstancedRenderer _renderer;
 
-    readonly List<CircleTessellationInstance> _instances = new List<CircleTessellationInstance>();
+    readonly List<CircleInstance> _instances = new List<CircleInstance>();
     Matrix4x4[] _matrices;
-    CircleTessellationInstanceData[] _data;
+    CircleInstanceData[] _data;
     int _scratchCapacity;
 
-    public void RegisterInstance(CircleTessellationInstance inst)
+    public void RegisterInstance(CircleInstance inst)
     {
         if (inst == null || _instances.Contains(inst))
             return;
         _instances.Add(inst);
     }
 
-    public void UnregisterInstance(CircleTessellationInstance inst)
+    public void UnregisterInstance(CircleInstance inst)
     {
         if (inst == null)
             return;
