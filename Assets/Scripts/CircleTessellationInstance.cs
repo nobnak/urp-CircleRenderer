@@ -1,20 +1,17 @@
 using UnityEngine;
 
-/// <summary>
-/// <see cref="CircleTessellationInstancedRenderer"/> に登録され、Transform とパラメータから円インスタンスを描画する。
-/// </summary>
 [DisallowMultipleComponent]
 [ExecuteAlways]
 public sealed class CircleTessellationInstance : MonoBehaviour
 {
-    [SerializeField] CircleTessellationInstancedRenderer _renderer;
+    [SerializeField] CircleTessellationInstancedGroup _group;
     [SerializeField] float _radius = 0.5f;
     [Range(1f, 64f)] [SerializeField] float _tess = 16f;
     [SerializeField] CircleTessellationDebugVis _debugVis;
     [SerializeField] CircleTessellationTessMode _tessMode;
     [SerializeField] Color _color = Color.white;
 
-    CircleTessellationInstancedRenderer _registeredWith;
+    CircleTessellationInstancedGroup _registeredWith;
 
     public float Radius { get => _radius; set => _radius = value; }
     public float Tess { get => _tess; set => _tess = value; }
@@ -33,14 +30,14 @@ public sealed class CircleTessellationInstance : MonoBehaviour
 
     void OnEnable()
     {
-        var r = _renderer != null ? _renderer : GetComponentInParent<CircleTessellationInstancedRenderer>();
-        if (r == null)
+        var g = _group != null ? _group : GetComponentInParent<CircleTessellationInstancedGroup>();
+        if (g == null)
         {
-            Debug.LogWarning($"{nameof(CircleTessellationInstance)}: no {nameof(CircleTessellationInstancedRenderer)} assigned or in parents.", this);
+            Debug.LogWarning($"{nameof(CircleTessellationInstance)}: no {nameof(CircleTessellationInstancedGroup)} assigned or in parents.", this);
             return;
         }
-        r.RegisterInstance(this);
-        _registeredWith = r;
+        g.RegisterInstance(this);
+        _registeredWith = g;
     }
 
     void OnDisable()

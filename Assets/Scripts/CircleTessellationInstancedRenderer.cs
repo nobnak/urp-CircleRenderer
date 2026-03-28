@@ -1,15 +1,8 @@
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 
-/// <summary>
-/// <see cref="CircleTessellationInstanceData"/> を StructuredBuffer に載せ、<see cref="Graphics.DrawMeshInstanced"/> で複数円を描画する。
-/// <see cref="CircleTessellationInstance"/> の登録によりシーン上のパラメータ付きインスタンスを描画できる。
-/// マテリアルは GPU Instancing を有効にし、シェーダーは Custom/CircleTessellationInstanced を使用する。
-/// <see cref="ExecuteAlwaysAttribute"/> により再生していない Edit Mode の Scene ビューでも登録インスタンスを描画する。
-/// 描画カメラは常に未指定（<c>null</c>＝既定の全カメラ向け）とする。
-/// </summary>
 [ExecuteAlways]
+[DefaultExecutionOrder(1000)]
 public sealed class CircleTessellationInstancedRenderer : MonoBehaviour
 {
     const int kMaxInstancesPerDraw = 1023;
@@ -21,14 +14,16 @@ public sealed class CircleTessellationInstancedRenderer : MonoBehaviour
     [SerializeField] ShadowCastingMode _castShadows = ShadowCastingMode.Off;
     [SerializeField] bool _receiveShadows;
     [SerializeField] int _layer;
-    [SerializeField] bool _drawRegisteredInLateUpdate = true;
 
-    readonly List<CircleTessellationInstance> _registered = new();
+    Matrix4x4[] _accumMatrices;
+    CircleTessellationInstanceData[] _accumData;
+    int _accumCount;
+    int _accumCapacity;
 
     GraphicsBuffer _instanceBuffer;
-    MaterialPropertyBlock _mpb;
+    int _matrixBatchCapacity;
     Matrix4x4[] _matrixBatch;
-    CircleTessellationInstanceData[] _dataBatch;
+    MaterialPropertyBlock _mpb;
     Matrix4x4[] _matrixScratch;
     CircleTessellationInstanceData[] _dataScratch;
     bool _instancingWarnIssued;
@@ -45,41 +40,57 @@ public sealed class CircleTessellationInstancedRenderer : MonoBehaviour
         set => _mesh = value;
     }
 
-    public void RegisterInstance(CircleTessellationInstance inst)
+    public int AccumulatedCount => _accumCount;
+
+    public void ClearFrameInstances() => _accumCount = 0;
+
+    public void AddInstance(Matrix4x4 matrix, CircleTessellationInstanceData data)
     {
-        if (inst == null || _registered.Contains(inst))
-            return;
-        _registered.Add(inst);
+        EnsureAccumCapacity(_accumCount + 1);
+        _accumMatrices[_accumCount] = matrix;
+        _accumData[_accumCount] = data;
+        _accumCount++;
     }
 
-    public void UnregisterInstance(CircleTessellationInstance inst)
+    public void AddInstances(Matrix4x4[] matrices, CircleTessellationInstanceData[] data, int count, int sourceStart = 0)
     {
-        if (inst == null)
+        if (count <= 0)
             return;
-        _registered.Remove(inst);
+        if (matrices == null || data == null)
+            return;
+        if (sourceStart < 0 || matrices.Length < sourceStart + count || data.Length < sourceStart + count)
+            return;
+        EnsureAccumCapacity(_accumCount + count);
+        for (int i = 0; i < count; i++)
+        {
+            int s = sourceStart + i;
+            _accumMatrices[_accumCount + i] = matrices[s];
+            _accumData[_accumCount + i] = data[s];
+        }
+        _accumCount += count;
     }
 
     void LateUpdate()
     {
-        if (!_drawRegisteredInLateUpdate)
-            return;
-        CompactRegistered();
-        int count = _registered.Count;
+        int count = _accumCount;
         if (count <= 0 || _material == null || _mesh == null)
+        {
+            _accumCount = 0;
             return;
+        }
         if (!MaterialInstancingReady())
+        {
+            _accumCount = 0;
             return;
-        EnsureBuffers();
+        }
         for (int offset = 0; offset < count; offset += kMaxInstancesPerDraw)
         {
             int n = Mathf.Min(kMaxInstancesPerDraw, count - offset);
+            EnsureGpuBuffer(n);
+            EnsureMatrixBatch(n);
+            _instanceBuffer.SetData(_accumData, offset, 0, n);
             for (int i = 0; i < n; i++)
-            {
-                var c = _registered[offset + i];
-                _matrixBatch[i] = c.transform.localToWorldMatrix;
-                _dataBatch[i] = c.InstanceData;
-            }
-            _instanceBuffer.SetData(_dataBatch, 0, 0, n);
+                _matrixBatch[i] = _accumMatrices[offset + i];
             _mpb.Clear();
             _mpb.SetBuffer(CircleInstancesId, _instanceBuffer);
             Graphics.DrawMeshInstanced(
@@ -95,54 +106,75 @@ public sealed class CircleTessellationInstancedRenderer : MonoBehaviour
                 null,
                 LightProbeUsage.Off);
         }
+        _accumCount = 0;
     }
 
     void OnEnable()
     {
         _instancingWarnIssued = false;
+        _accumCount = 0;
         if (_mesh == null)
             _mesh = CircleTessellationPatchMesh.Create();
-        EnsureBuffers();
+        _mpb ??= new MaterialPropertyBlock();
     }
 
     void OnDisable()
     {
+        _accumCount = 0;
         DisposeBuffer();
     }
 
     void OnDestroy()
     {
+        _accumCount = 0;
         DisposeBuffer();
     }
 
-    void EnsureBuffers()
+    static int Align16(int n) => (n + 15) & ~15;
+
+    static int AlignedDrawBatchCapacity(int minElements)
+    {
+        minElements = Mathf.Clamp(minElements, 1, kMaxInstancesPerDraw);
+        int a = Align16(minElements);
+        return Mathf.Min(a, kMaxInstancesPerDraw);
+    }
+
+    void EnsureAccumCapacity(int requiredCount)
+    {
+        int newCap = Align16(Mathf.Max(requiredCount, 16));
+        if (_accumMatrices != null && _accumData != null && _accumMatrices.Length >= newCap && _accumData.Length >= newCap)
+        {
+            _accumCapacity = newCap;
+            return;
+        }
+        System.Array.Resize(ref _accumMatrices, newCap);
+        System.Array.Resize(ref _accumData, newCap);
+        _accumCapacity = newCap;
+    }
+
+    void EnsureGpuBuffer(int elementCount)
     {
         int stride = CircleTessellationInstanceData.Stride;
-        if (_instanceBuffer == null || _instanceBuffer.count < kMaxInstancesPerDraw || _instanceBuffer.stride != stride)
-        {
-            DisposeBuffer();
-            _instanceBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, kMaxInstancesPerDraw, stride);
-        }
-        if (_matrixBatch == null || _matrixBatch.Length < kMaxInstancesPerDraw)
-            _matrixBatch = new Matrix4x4[kMaxInstancesPerDraw];
-        if (_dataBatch == null || _dataBatch.Length < kMaxInstancesPerDraw)
-            _dataBatch = new CircleTessellationInstanceData[kMaxInstancesPerDraw];
-        _mpb ??= new MaterialPropertyBlock();
+        int cap = AlignedDrawBatchCapacity(elementCount);
+        if (_instanceBuffer != null && _instanceBuffer.count == cap && _instanceBuffer.stride == stride)
+            return;
+        _instanceBuffer?.Dispose();
+        _instanceBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, cap, stride);
+    }
+
+    void EnsureMatrixBatch(int forCount)
+    {
+        int cap = AlignedDrawBatchCapacity(forCount);
+        if (_matrixBatch != null && _matrixBatchCapacity >= cap)
+            return;
+        _matrixBatch = new Matrix4x4[cap];
+        _matrixBatchCapacity = cap;
     }
 
     void DisposeBuffer()
     {
         _instanceBuffer?.Dispose();
         _instanceBuffer = null;
-    }
-
-    void CompactRegistered()
-    {
-        for (int i = _registered.Count - 1; i >= 0; i--)
-        {
-            if (_registered[i] == null)
-                _registered.RemoveAt(i);
-        }
     }
 
     bool MaterialInstancingReady()
@@ -160,9 +192,6 @@ public sealed class CircleTessellationInstancedRenderer : MonoBehaviour
         return false;
     }
 
-    /// <summary>
-    /// ワールド行列とインスタンスデータ（同じ長さ）で描画する。
-    /// </summary>
     public void Draw(Matrix4x4[] matrices, CircleTessellationInstanceData[] instances, int count, int layer = 0)
     {
         if (_material == null || _mesh == null || count <= 0)
@@ -171,10 +200,11 @@ public sealed class CircleTessellationInstancedRenderer : MonoBehaviour
             return;
         if (!MaterialInstancingReady())
             return;
-        EnsureBuffers();
         for (int offset = 0; offset < count; offset += kMaxInstancesPerDraw)
         {
             int n = Mathf.Min(kMaxInstancesPerDraw, count - offset);
+            EnsureGpuBuffer(n);
+            EnsureMatrixBatch(n);
             _instanceBuffer.SetData(instances, offset, 0, n);
             for (int i = 0; i < n; i++)
                 _matrixBatch[i] = matrices[offset + i];
@@ -195,9 +225,6 @@ public sealed class CircleTessellationInstancedRenderer : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// 単一インスタンス（テスト用）。
-    /// </summary>
     public void DrawOne(Matrix4x4 matrix, CircleTessellationInstanceData instance, int layer = 0)
     {
         if (_matrixScratch == null)
