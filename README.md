@@ -79,3 +79,33 @@ Concrete renderers use `[DefaultExecutionOrder(1000)]`. Intended flow: group `Up
 `CircleInstanceData` / `RingInstanceData` must match each `*Instanced.shader` `StructuredBuffer`. Non-instanced `Circle.shader` / `Ring.shader` (material properties + tessellation) are covered in [§2](#2-circle) and [§3](#3-ring).
 
 ---
+
+## 2. Circle
+
+Shaders: `Custom/Circle`, `Custom/CircleInstanced`.
+
+### 2.1 `CirclePatchMesh`
+
+For `Custom/Circle`: a three-sector triangle patch.
+
+- `uv.x`: 0 = center A, 1 = B, 2 = C  
+- `uv.y`: sector index  
+
+### 2.2 `Circle.shader` (tessellation)
+
+`PatchConstant` comes from `BuildPatchFactors`: `edge[0]` is the tessellation factor for **arc BC on the u==0 side**. Radial edges A–B / A–C use factor 1.
+
+### 2.3 `CircleShared.hlsl`
+
+Three sectors per patch (center A on the circle, B/C on the circumference). `CircleParams` groups parameters. `ComputeArcTess` handles distance-based tessellation; `BuildPatchFactors` uses `edge[0]` for arc BC; `EvalFragColor` shows debug barycentrics.
+
+### 2.4 `CircleInstanceData` / `CircleInstance`
+
+- `CircleTessMode` / `CircleDebugVis` mirror shader modes. On the GPU, enum values are stored in **float** fields such as `tessMode` / `debugVis`.  
+- Layout must match `StructuredBuffer<CircleInstanceData>` (`_CircleInstances`) in `Custom/CircleInstanced`.
+
+### 2.5 `CircleInstanced.shader`
+
+`#pragma target 5.0`, hull / domain / fragment. Instance data is read from `_CircleInstances` via `UNITY_GET_INSTANCE_ID`.
+
+---
