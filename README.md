@@ -4,14 +4,14 @@ Patch meshes for circles and rings, tessellation shaders, and GPU instancing on 
 
 ## Contents
 
-1. [GPU instancing (C#)](#1-gpu-instancing-c)
+1. [GPU instancing](#1-gpu-instancing)
 2. [Circle](#2-circle)
 3. [Ring](#3-ring)
 4. [Key files](#4-key-files)
 
 ---
 
-## 1. GPU instancing (C#)
+## 1. GPU instancing
 
 ### 1.1 Overview
 
@@ -134,3 +134,19 @@ Quad `SV_TessFactor` follows **UV edges**, not control-point order: `[0]=u==0`, 
 Instance data is read from `_RingInstances`.
 
 ---
+
+## 4. Key files
+
+Paths are under `Packages/jp.nobnak.circle/`.
+
+| Kind | Path |
+|------|------|
+| Instancing base | `Runtime/InstancedRendererBase.cs` |
+| Groups / scratch | `Runtime/InstancedGroupScratch.cs`, `Runtime/CircleInstancedGroup.cs`, `Runtime/RingInstancedGroup.cs` |
+| Renderers | `Runtime/CircleInstancedRenderer.cs`, `Runtime/RingInstancedRenderer.cs` |
+| Instances | `Runtime/CircleInstance.cs`, `Runtime/RingInstance.cs`, `Runtime/CircleInstanceData.cs`, `Runtime/RingInstanceData.cs` |
+| Mesh builders | `Runtime/CirclePatchMesh.cs`, `Runtime/RingPatchMesh.cs` |
+| Editor | `Editor/CirclePatchMeshMenu.cs`, `Editor/RingPatchMeshMenu.cs` |
+| Mesh assets | `Models/CirclePatch.asset`, `Models/RingPatch.asset` |
+| Shaders | `Shaders/Circle.shader`, `Shaders/CircleInstanced.shader`, `Shaders/Ring.shader`, `Shaders/RingInstanced.shader`, `Shaders/Includes/CircleShared.hlsl` |
+
