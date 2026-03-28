@@ -1,152 +1,83 @@
-# urp-CircleRenderer — technical reference
+# urp-CircleRenderer
 
-Patch meshes for circles and rings, tessellation shaders, and GPU instancing on URP. Cross-checked against the implementation under `Packages/jp.nobnak.circle` (Runtime / Shaders).
+**Circle and ring** rendering for **URP** via the embedded package `jp.nobnak.circle`: patch meshes, tessellation, and GPU instancing.
 
-## Contents
+## Table of contents
 
-1. [GPU instancing](#1-gpu-instancing)
-2. [Circle](#2-circle)
-3. [Ring](#3-ring)
-4. [Key files](#4-key-files)
+- [Overview](#overview)
+- [Requirements](#requirements)
+- [Installation](#installation-openupm)
+- [What you get](#what-you-get)
+- [Package layout](#package-layout)
+- [Further documentation](#further-documentation)
 
----
+## Overview
 
-## 1. GPU instancing
+- **Tessellation** — Triangle patches (filled circle) and quad patches (ring); control tessellation along the arc.
+- **Instancing** — Components that draw many instances with `Graphics.DrawMeshInstanced` and structured buffers.
+- **URP** — Shaders `Custom/Circle`, `Custom/Ring`, plus `*Instanced` variants on the Universal Render Pipeline.
 
-### 1.1 Overview
+Implementation details and design notes live in [COMMENTS.md](COMMENTS.md).
 
-Per-instance data lives in a `ComputeBuffer` (`ComputeBufferType.Structured`), bound with `MaterialPropertyBlock.SetBuffer`, and drawn with `Graphics.DrawMeshInstanced`. `LightProbeUsage.Off` is set.
+## Requirements
 
-Circles use `Custom/CircleInstanced`, rings use `Custom/RingInstanced`. Logic is shared in `InstancedRendererBase<TData>`; concrete types differ only in `TData`, the buffer `PropertyToID`, the fallback shader name, and default mesh creation.
+- **Unity 6000.0 or later** (see the `unity` field in `Packages/jp.nobnak.circle/package.json`)
+- **Universal RP** — match the package dependency (e.g. `com.unity.render-pipelines.universal` **17.4.0**)
+- **Shader Model 5.0** — platform must support hull/domain tessellation
 
-### 1.2 `InstancedRendererBase<TData>`
+## Installation (OpenUPM)
 
-| Topic | Behavior |
-|------|------------|
-| Generics | Components must be **concrete types** (e.g. `CircleInstancedRenderer`). Only the base uses the shape `InstancedRendererBase<CircleInstanceData>`. Unity **cannot** attach a generic `MonoBehaviour` as that generic type. |
-| Stride | `Marshal.SizeOf<TData>()`. The C# `TData` must match the `struct` in each `*Instanced.shader`. |
-| Batch cap | `kMaxInstancesPerDraw == 1023`. Both accumulated draws and `Draw` split via offset loops. |
-| GPU buffer size | `AlignedDrawBatchCapacity` rounds up to 16 and clamps to 1023. |
-| Accumulation buffers | `_accumMatrices` and `_accumData` grow only when needed; new capacity uses `Align16` (multiple of 16). |
-| Shader | Serialized field `_shader`. If unset, `Shader.Find(FallbackInstancedShaderName)`. At runtime, `new Material(shader)` with `HideFlags.HideAndDontSave` and `enableInstancing = true`. No material asset required. |
-| Lifecycle | `OnEnable` rebuilds material and `EnsureDefaultMeshIfNull`. `OnDisable` / `OnDestroy` release `ComputeBuffer` and generated materials. |
-| Editor | `[ExecuteAlways]`. Under `UNITY_EDITOR`, `OnValidate` reacts to shader changes. |
-| Camera | `DrawMeshInstanced` is called with camera argument `null`. |
+The package is on [OpenUPM](https://openupm.com/). Use the same scoped-registry flow as [urp-TransparentRayTracer](https://github.com/nobnak/urp-TransparentRayTracer).
 
-**What derived types override**
+### 1. Add scoped registry
 
-| Topic | Circle | Ring |
-|------|--------|------|
-| `TData` | `CircleInstanceData` | `RingInstanceData` |
-| `InstanceBufferPropertyId` | `_CircleInstances` | `_RingInstances` |
-| `FallbackInstancedShaderName` | `Custom/CircleInstanced` | `Custom/RingInstanced` |
-| `EnsureDefaultMeshIfNull` | `CirclePatchMesh.Create()` | `RingPatchMesh.Create()` |
+1. Open **Edit → Project Settings → Package Manager**.
+2. Under **Scoped Registries**, click **+** and set:
 
-**Public members (base)**
+   | Field    | Value                         |
+   | -------- | ----------------------------- |
+   | Name     | OpenUPM                       |
+   | URL      | `https://package.openupm.com` |
+   | Scope(s) | `jp.nobnak`                   |
 
-| Symbol | Description |
-|----------|------|
-| `Material` | Draw material (get only; no setter). |
-| `Mesh` | Mesh to draw (get / set). |
-| `AccumulatedCount` | Count accumulated for the current frame. |
-| `ClearFrameInstances` | Clears accumulation. |
-| `AddInstance` / `AddInstances` | Append to frame accumulation. |
-| `Draw` / `DrawOne` | Draw immediately, separate from accumulation. |
+3. Click **Save**.
 
-**Warning**  
-If `enableInstancing` is off, logs a warning **once**, including `GetType().Name` (concrete renderer).
+### 2. Add the package
 
-**`LateUpdate`**  
-Only **`CircleInstancedRenderer` / `RingInstancedRenderer`** should call `DrawAccumulatedFrame()` from `void LateUpdate() => DrawAccumulatedFrame();`. Putting this only on the base can fail to run in some setups.
+1. Open **Window → Package Manager**.
+2. Set **Packages:** to **My Registries** (or any list that includes OpenUPM).
+3. Select **Circle Renderer (URP)** (`jp.nobnak.circle`) and click **Install**.
 
-**Execution order**  
-Concrete renderers use `[DefaultExecutionOrder(1000)]`. Intended flow: group `Update` calls `AddInstances`, then `LateUpdate` on the renderer flushes the same frame.
+Or use **Add package by name** and enter:
 
-### 1.3 `InstancedGroupScratch`
+`jp.nobnak.circle`
 
-`EnsurePair<T>` keeps `Matrix4x4[]` and `T[]` at the same capacity, growing on 16-byte boundaries. Used by `CircleInstancedGroup` / `RingInstancedGroup` for scratch.
+**Package page:** [openupm.com/packages/jp.nobnak.circle](https://openupm.com/packages/jp.nobnak.circle)
 
-### 1.4 `CircleInstancedGroup` / `RingInstancedGroup`
+## What you get
 
-`[ExecuteAlways]`. Children `CircleInstance` / `RingInstance` are held in a `List`. Each `Update`, after dropping nulls, writes `localToWorldMatrix` and `InstanceData` into scratch and passes them to `…InstancedRenderer.AddInstances`. Scratch arrays are `[NonSerialized]`.
+| Area | Summary |
+| ---- | ------- |
+| Shaders | `Custom/Circle`, `Custom/Ring` (tessellated), `Custom/CircleInstanced`, `Custom/RingInstanced` |
+| Runtime | `CircleInstancedRenderer` / `RingInstancedRenderer`, `CircleInstance` / `RingInstance`, group components |
+| Meshes | `CirclePatchMesh` / `RingPatchMesh` and mesh assets creatable from editor menus |
+| Shared HLSL | `CircleShared.hlsl` (shared circle-side logic) |
 
-### 1.5 `CircleInstance` / `RingInstance`
+Sample scenes in this repository: `Assets/Scenes/` (e.g. `Circle.unity`, `Ring.unity`).
 
-`[ExecuteAlways]`. `OnEnable` uses `_group` if set; otherwise `GetComponentInParent<…Group>()`. If none is found, warns and does not register. `OnDisable` unregisters.
+## Package layout
 
-### 1.6 Instancing vs patch shaders
+Embedded package root:
 
-`CircleInstanceData` / `RingInstanceData` must match each `*Instanced.shader` `StructuredBuffer`. Non-instanced `Circle.shader` / `Ring.shader` (material properties + tessellation) are covered in [§2](#2-circle) and [§3](#3-ring).
+`Packages/jp.nobnak.circle/`
 
----
+Main folders:
 
-## 2. Circle
+- `Runtime/` — C# (renderers, instances, mesh builders)
+- `Shaders/` — ShaderLab / HLSL
+- `Editor/` — menu items to create mesh assets
+- `Models/` — bundled mesh assets
 
-Shaders: `Custom/Circle`, `Custom/CircleInstanced`.
+## Further documentation
 
-### 2.1 `CirclePatchMesh`
-
-For `Custom/Circle`: a three-sector triangle patch.
-
-- `uv.x`: 0 = center A, 1 = B, 2 = C  
-- `uv.y`: sector index  
-
-### 2.2 `Circle.shader` (tessellation)
-
-`PatchConstant` comes from `BuildPatchFactors`: `edge[0]` is the tessellation factor for **arc BC on the u==0 side**. Radial edges A–B / A–C use factor 1.
-
-### 2.3 `CircleShared.hlsl`
-
-Three sectors per patch (center A on the circle, B/C on the circumference). `CircleParams` groups parameters. `ComputeArcTess` handles distance-based tessellation; `BuildPatchFactors` uses `edge[0]` for arc BC; `EvalFragColor` shows debug barycentrics.
-
-### 2.4 `CircleInstanceData` / `CircleInstance`
-
-- `CircleTessMode` / `CircleDebugVis` mirror shader modes. On the GPU, enum values are stored in **float** fields such as `tessMode` / `debugVis`.  
-- Layout must match `StructuredBuffer<CircleInstanceData>` (`_CircleInstances`) in `Custom/CircleInstanced`.
-
-### 2.5 `CircleInstanced.shader`
-
-`#pragma target 5.0`, hull / domain / fragment. Instance data is read from `_CircleInstances` via `UNITY_GET_INSTANCE_ID`.
-
----
-
-## 3. Ring
-
-Shaders: `Custom/Ring`, `Custom/RingInstanced`.
-
-### 3.1 `RingPatchMesh`
-
-For `Custom/Ring`: three quads, `MeshTopology.Quads`. Vertices sit on circles with **inner radius 1 and outer radius 2**. `Ring.shader` `Vert` scales them to the actual `rIn` / `rOut`.
-
-- **Second UV channel** (`uv2`) **x** holds the sector index (0, 1, 2). The shader reads it as `TEXCOORD1` (`sectorPack.x`).
-
-### 3.2 `Ring.shader` (quad tessellation)
-
-Quad `SV_TessFactor` follows **UV edges**, not control-point order: `[0]=u==0`, `[1]=v==0`, `[2]=u==1`, `[3]=v==1`. `v==0` is the inner arc (V0–V1), `v==1` the outer arc (V2–V3). `u==0` / `u==1` are radial (V3–V0, V1–V2).
-
-### 3.3 `RingInstanceData` / `RingInstance`
-
-- `RingTessMode` / `RingDebugVis` align with the shader; enums are stored in matching float fields on the GPU.  
-- Layout must match `StructuredBuffer<RingInstanceData>` (`_RingInstances`) in `Custom/RingInstanced`.
-
-### 3.4 `RingInstanced.shader`
-
-Instance data is read from `_RingInstances`.
-
----
-
-## 4. Key files
-
-Paths are under `Packages/jp.nobnak.circle/`.
-
-| Kind | Path |
-|------|------|
-| Instancing base | `Runtime/InstancedRendererBase.cs` |
-| Groups / scratch | `Runtime/InstancedGroupScratch.cs`, `Runtime/CircleInstancedGroup.cs`, `Runtime/RingInstancedGroup.cs` |
-| Renderers | `Runtime/CircleInstancedRenderer.cs`, `Runtime/RingInstancedRenderer.cs` |
-| Instances | `Runtime/CircleInstance.cs`, `Runtime/RingInstance.cs`, `Runtime/CircleInstanceData.cs`, `Runtime/RingInstanceData.cs` |
-| Mesh builders | `Runtime/CirclePatchMesh.cs`, `Runtime/RingPatchMesh.cs` |
-| Editor | `Editor/CirclePatchMeshMenu.cs`, `Editor/RingPatchMeshMenu.cs` |
-| Mesh assets | `Models/CirclePatch.asset`, `Models/RingPatch.asset` |
-| Shaders | `Shaders/Circle.shader`, `Shaders/CircleInstanced.shader`, `Shaders/Ring.shader`, `Shaders/RingInstanced.shader`, `Shaders/Includes/CircleShared.hlsl` |
-
+- **[COMMENTS.md](COMMENTS.md)** — Instancing behavior, patch layout and tessellation factors for circle/ring shaders, file map, and other maintainer notes.
