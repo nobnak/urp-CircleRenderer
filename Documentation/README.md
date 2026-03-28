@@ -1,6 +1,6 @@
 # urp-CircleRenderer — 技術ドキュメント
 
-円／リングのパッチメッシュ、テッセレーション用シェーダー、および URP 上での GPU インスタンシング描画の要点。実装（`Assets/Scripts`・`Assets/Shaders`）と照合済み。
+円／リングのパッチメッシュ、テッセレーション用シェーダー、および URP 上での GPU インスタンシング描画の要点。実装（`Packages/jp.nobnak.circle` の Runtime / Shaders）と照合済み。
 
 ## 目次
 
@@ -133,13 +133,15 @@ Quad の `SV_TessFactor` は CP 順ではなく **UV の辺** に対応: `[0]=u=
 
 ## 4. 主要ファイル一覧
 
-| 種別 | パス（`Assets/` 以下） |
+| 種別 | パス（`Packages/jp.nobnak.circle/` 以下） |
 |------|-------------------------|
-| インスタンス基底 | `Scripts/InstancedRendererBase.cs` |
-| グループ・スクラッチ | `Scripts/InstancedGroupScratch.cs`, `Scripts/CircleInstancedGroup.cs`, `Scripts/RingInstancedGroup.cs` |
-| レンダラー | `Scripts/CircleInstancedRenderer.cs`, `Scripts/RingInstancedRenderer.cs` |
-| インスタンス | `Scripts/CircleInstance.cs`, `Scripts/RingInstance.cs`, `Scripts/CircleInstanceData.cs`, `Scripts/RingInstanceData.cs` |
-| メッシュ | `Scripts/CirclePatchMesh.cs`, `Scripts/RingPatchMesh.cs` |
+| インスタンス基底 | `Runtime/InstancedRendererBase.cs` |
+| グループ・スクラッチ | `Runtime/InstancedGroupScratch.cs`, `Runtime/CircleInstancedGroup.cs`, `Runtime/RingInstancedGroup.cs` |
+| レンダラー | `Runtime/CircleInstancedRenderer.cs`, `Runtime/RingInstancedRenderer.cs` |
+| インスタンス | `Runtime/CircleInstance.cs`, `Runtime/RingInstance.cs`, `Runtime/CircleInstanceData.cs`, `Runtime/RingInstanceData.cs` |
+| メッシュ | `Runtime/CirclePatchMesh.cs`, `Runtime/RingPatchMesh.cs` |
+| エディタ | `Editor/CirclePatchMeshMenu.cs`, `Editor/RingPatchMeshMenu.cs` |
+| メッシュアセット | `Models/CirclePatch.asset`, `Models/RingPatch.asset` |
 | シェーダー | `Shaders/Circle.shader`, `Shaders/CircleInstanced.shader`, `Shaders/Ring.shader`, `Shaders/RingInstanced.shader`, `Shaders/Includes/CircleShared.hlsl` |
 
 リポジトリ直下の [README.md](../README.md) は本書への入口のみ。
