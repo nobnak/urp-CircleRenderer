@@ -200,6 +200,14 @@
       },
       "url": "https://packages.unity.com"
     },
+    "jp.nobnak.circle": {
+      "version": "file:jp.nobnak.circle",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {
+        "com.unity.render-pipelines.universal": "17.4.0"
+      }
+    },
     "com.unity.modules.accessibility": {
       "version": "1.0.0",
       "depth": 0,
