@@ -12,9 +12,13 @@
 
 `CircleInstance` を保持し、毎フレーム `Update` で `CircleInstancedRenderer.AddInstances` を通じてレンダラーに累積登録する。
 
+### `InstancedRendererBase.cs` / `InstancedGroupScratch.cs`
+
+- 円・リングのインスタンスドレンダラーで共通する `ComputeBuffer` + `DrawMeshInstanced` 累積描画と、グループ用スクラッチ配列確保（16 境界）を集約する。
+
 ### `CircleInstancedRenderer.cs`
 
-- `CircleInstanceData` を StructuredBuffer に載せ、`Graphics.DrawMeshInstanced` で複数円を描画する。
+- `InstancedRendererBase` を継承。`CircleInstanceData` を StructuredBuffer に載せ、`Graphics.DrawMeshInstanced` で複数円を描画する。
 - 同一フレーム内で `AddInstance` / `AddInstances` を複数回呼び出して累積でき、`LateUpdate` でまとめて描画する。
 - 累積バッファは再利用し、不足時のみ 16 境界で拡張する。
 - マテリアルは GPU Instancing を有効にし、シェーダーは `Custom/CircleInstanced` を使用する。
@@ -43,4 +47,4 @@
 
 `Custom/Ring` 用。3 quad パッチ。`MeshTopology.Quads`。内周 r=1・外周 r=2。`uv2.x` にセクタ index。
 
-Ring 側のインスタンスは `RingInstance` / `RingInstancedGroup` / `RingInstancedRenderer` / `RingInstanceData`（`RingTessMode` / `RingDebugVis`）。Circle とコードは共有しない。
+Ring 側のインスタンスは `RingInstance` / `RingInstancedGroup` / `RingInstancedRenderer` / `RingInstanceData`（`RingTessMode` / `RingDebugVis`）。レンダラー・グループのバッファ周りは `InstancedRendererBase` / `InstancedGroupScratch` で Circle と共有する。

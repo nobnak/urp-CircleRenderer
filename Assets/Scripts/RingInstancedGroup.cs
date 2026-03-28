@@ -32,7 +32,7 @@ public sealed class RingInstancedGroup : MonoBehaviour
         int n = _instances.Count;
         if (n == 0)
             return;
-        EnsureScratchCapacity(n);
+        InstancedGroupScratch.EnsurePair(ref _matrices, ref _data, n);
         int write = 0;
         for (int i = 0; i < n; i++)
         {
@@ -56,23 +56,4 @@ public sealed class RingInstancedGroup : MonoBehaviour
                 _instances.RemoveAt(i);
         }
     }
-
-    void EnsureScratchCapacity(int need)
-    {
-        int newCap = Align16(Mathf.Max(need, 16));
-        int curM = _matrices != null ? _matrices.Length : 0;
-        int curD = _data != null ? _data.Length : 0;
-        if (curM >= newCap && curD >= newCap)
-            return;
-        if (_matrices == null)
-            _matrices = new Matrix4x4[newCap];
-        else
-            System.Array.Resize(ref _matrices, newCap);
-        if (_data == null)
-            _data = new RingInstanceData[newCap];
-        else
-            System.Array.Resize(ref _data, newCap);
-    }
-
-    static int Align16(int n) => (n + 15) & ~15;
 }

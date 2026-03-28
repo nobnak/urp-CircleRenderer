@@ -7,9 +7,8 @@ public sealed class CircleInstancedGroup : MonoBehaviour
     [SerializeField] CircleInstancedRenderer _renderer;
 
     readonly List<CircleInstance> _instances = new List<CircleInstance>();
-    Matrix4x4[] _matrices;
-    CircleInstanceData[] _data;
-    int _scratchCapacity;
+    [System.NonSerialized] Matrix4x4[] _matrices;
+    [System.NonSerialized] CircleInstanceData[] _data;
 
     public void RegisterInstance(CircleInstance inst)
     {
@@ -33,7 +32,7 @@ public sealed class CircleInstancedGroup : MonoBehaviour
         int n = _instances.Count;
         if (n == 0)
             return;
-        EnsureScratchCapacity(n);
+        InstancedGroupScratch.EnsurePair(ref _matrices, ref _data, n);
         int write = 0;
         for (int i = 0; i < n; i++)
         {
@@ -57,19 +56,4 @@ public sealed class CircleInstancedGroup : MonoBehaviour
                 _instances.RemoveAt(i);
         }
     }
-
-    void EnsureScratchCapacity(int need)
-    {
-        int newCap = Align16(Mathf.Max(need, 16));
-        if (_matrices != null && _data != null && _matrices.Length >= newCap && _data.Length >= newCap)
-        {
-            _scratchCapacity = newCap;
-            return;
-        }
-        System.Array.Resize(ref _matrices, newCap);
-        System.Array.Resize(ref _data, newCap);
-        _scratchCapacity = newCap;
-    }
-
-    static int Align16(int n) => (n + 15) & ~15;
 }
