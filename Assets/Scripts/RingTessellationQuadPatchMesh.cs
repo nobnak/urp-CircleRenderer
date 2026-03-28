@@ -1,9 +1,5 @@
 using UnityEngine;
 
-/// <summary>
-/// Custom/RingTessellationQuad 用。3 quad パッチ（各 4 制御点）。uv は各パッチで (0,0),(1,0),(1,1),(0,1) = Domain の (u,v)。
-/// 頂点位置は内周が単位円、外周が半径 2 の円上。uv2.x にセクタ index(0..2)。メッシュは <see cref="MeshTopology.Quads"/> 必須。
-/// </summary>
 public static class RingTessellationQuadPatchMesh
 {
     public const int SectorCount = 3;

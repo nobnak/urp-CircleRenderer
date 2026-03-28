@@ -1,9 +1,5 @@
 using UnityEngine;
 
-/// <summary>
-/// Custom/CircleTessellation 用。3 セクタの三角形パッチを生成する。
-/// uv.x=0(A:中心),1(B),2(C) / uv.y=セクタ index。
-/// </summary>
 public static class CircleTessellationPatchMesh
 {
     public const int SectorCount = 3;
