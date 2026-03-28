@@ -1,7 +1,6 @@
 #ifndef CIRCLE_SHARED_INCLUDED
 #define CIRCLE_SHARED_INCLUDED
 
-// 3 sectors: each patch uses A=center, B/C=adjacent points on the circumference.
 static const float kTwoPi = 6.28318530718;
 static const float kSectorSpan = kTwoPi / 3.0;
 
@@ -9,7 +8,7 @@ struct CircleParams
 {
     float radius;
     float tess;
-    float tessMode; // 0 = Fixed, 1 = Log Distance
+    float tessMode;
     float debugVis;
     float4 color;
 };
@@ -73,7 +72,7 @@ ControlPoint BuildControlPoint(float2 uv, float radius)
 TessellationFactors BuildPatchFactors(float arc)
 {
     TessellationFactors f;
-    f.edge[0] = arc; // Arc BC
+    f.edge[0] = arc;
     f.edge[1] = 1.0;
     f.edge[2] = 1.0;
     f.inside = 1.0;

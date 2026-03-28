@@ -51,7 +51,6 @@ Shader "Custom/Ring"
                 UNITY_DEFINE_INSTANCED_PROP(float, _DebugVis)
             UNITY_INSTANCING_BUFFER_END(UnityPerMaterial)
 
-            // 3 quad パッチ: 入力メッシュは内周 r=1・外周 r=2 の円上。Vert で rIn/rOut にスケールし Domain と一致させる。
             static const float kTwoPi = 6.28318530718;
             static const float kSectorSpan = kTwoPi / 3.0;
             static const float kInputRIn = 1.0;
@@ -129,8 +128,6 @@ Shader "Custom/Ring"
                 float inside[2] : SV_InsideTessFactor;
             };
 
-            // Quad の SV_TessFactor は CP 順ではなく UV の辺: [0]=u==0, [1]=v==0, [2]=u==1, [3]=v==1 (MSDN)。
-            // v==0 が内弧 (V0–V1)、v==1 が外弧 (V2–V3)。u==0 / u==1 は径方向 (V3–V0, V1–V2)。
             TessellationFactors PatchConstant(InputPatch<ControlPoint, 4> patch)
             {
                 UNITY_SETUP_INSTANCE_ID(patch[0]);

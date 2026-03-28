@@ -50,7 +50,6 @@ Shader "Custom/Circle"
             UNITY_INSTANCING_BUFFER_END(UnityPerMaterial)
             #include "Assets/Shaders/Includes/CircleShared.hlsl"
 
-            // uv.x: 0=中心A, 1=B, 2=C / uv.y: セクタ index(0..2)
             ControlPoint Vert(Attributes input)
             {
                 UNITY_SETUP_INSTANCE_ID(input);
@@ -60,7 +59,6 @@ Shader "Custom/Circle"
                 return o;
             }
 
-            // edge[0]=u==0 の弧 BC を分割。径方向 A–B, A–C は 1。
             TessellationFactors PatchConstant(InputPatch<ControlPoint, 3> patch)
             {
                 UNITY_SETUP_INSTANCE_ID(patch[0]);

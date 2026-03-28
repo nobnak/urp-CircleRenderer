@@ -1,8 +1,5 @@
 using UnityEngine;
 
-/// <summary>
-/// <see cref="CircleInstancedGroup"/> / <see cref="RingInstancedGroup"/> 用の行列・インスタンスデータスクラッチ配列確保。
-/// </summary>
 public static class InstancedGroupScratch
 {
     public static void EnsurePair<T>(ref Matrix4x4[] matrices, ref T[] data, int need) where T : struct
