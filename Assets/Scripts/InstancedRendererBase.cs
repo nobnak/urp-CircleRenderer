@@ -1,23 +1,23 @@
+using System.Runtime.InteropServices;
 using UnityEngine;
 using UnityEngine.Rendering;
 
-/// <summary>
-/// StructuredBuffer + <see cref="Graphics.DrawMeshInstanced"/> の共通実装。
-/// 派生クラスに <c>[DefaultExecutionOrder(1000)]</c> と <c>void LateUpdate() =&gt; DrawAccumulatedFrame();</c> を置く。
-/// </summary>
 [ExecuteAlways]
-public abstract class InstancedRendererBase : MonoBehaviour
+public abstract class InstancedRendererBase<TData> : MonoBehaviour where TData : struct
 {
     protected const int kMaxInstancesPerDraw = 1023;
 
-    [SerializeField] protected Material _material;
     [SerializeField] protected Mesh _mesh;
     [SerializeField] protected ShadowCastingMode _castShadows = ShadowCastingMode.Off;
     [SerializeField] protected bool _receiveShadows;
     [SerializeField] protected int _layer;
+    [SerializeField] protected Shader _shader;
 
     [System.NonSerialized] protected Matrix4x4[] _accumMatrices;
     [System.NonSerialized] protected int _accumCount;
+    [System.NonSerialized] TData[] _accumData;
+    [System.NonSerialized] Matrix4x4[] _matrixScratch;
+    [System.NonSerialized] TData[] _dataScratch;
 
     protected ComputeBuffer _instanceBuffer;
     protected int _instanceBufferStride;
@@ -26,11 +26,10 @@ public abstract class InstancedRendererBase : MonoBehaviour
     protected MaterialPropertyBlock _mpb;
     protected bool _instancingWarnIssued;
 
-    public Material Material
-    {
-        get => _material;
-        set => _material = value;
-    }
+    protected Material _material;
+    Material _ownedMaterial;
+
+    public Material Material => _material;
 
     public Mesh Mesh
     {
@@ -40,18 +39,51 @@ public abstract class InstancedRendererBase : MonoBehaviour
 
     public int AccumulatedCount => _accumCount;
 
-    protected abstract int InstanceDataStride { get; }
+    protected int InstanceDataStride => Marshal.SizeOf<TData>();
+
     protected abstract int InstanceBufferPropertyId { get; }
-    protected abstract string InstancingWarningSourceName { get; }
-    protected abstract void UploadAccumInstanceData(int sourceOffset, int elementCount);
+    protected abstract string FallbackInstancedShaderName { get; }
     protected abstract void EnsureDefaultMeshIfNull();
 
     public void ClearFrameInstances() => _accumCount = 0;
 
-    protected void EnsureAccumPairCapacity<T>(ref T[] data, int requiredCount) where T : struct
+    protected void RebuildDrawMaterial(Shader shader, string fallbackShaderName)
+    {
+        Shader s = shader != null ? shader : Shader.Find(fallbackShaderName);
+        if (s == null)
+        {
+            DisposeOwnedDrawMaterial();
+            return;
+        }
+        if (_material != null && _ownedMaterial == _material && _material.shader == s)
+            return;
+        DisposeOwnedDrawMaterial();
+        _material = new Material(s) { hideFlags = HideFlags.HideAndDontSave };
+        _material.enableInstancing = true;
+        _ownedMaterial = _material;
+    }
+
+    protected void RebuildDrawMaterialFromFields() =>
+        RebuildDrawMaterial(_shader, FallbackInstancedShaderName);
+
+    protected void DisposeOwnedDrawMaterial()
+    {
+        if (_ownedMaterial == null)
+            return;
+        var m = _ownedMaterial;
+        _ownedMaterial = null;
+        if (_material == m)
+            _material = null;
+        if (Application.isPlaying)
+            Destroy(m);
+        else
+            DestroyImmediate(m);
+    }
+
+    protected void EnsureAccumPairCapacity(int requiredCount)
     {
         int curM = _accumMatrices != null ? _accumMatrices.Length : 0;
-        int curD = data != null ? data.Length : 0;
+        int curD = _accumData != null ? _accumData.Length : 0;
         if (curM >= requiredCount && curD >= requiredCount)
             return;
         int newCap = Align16(Mathf.Max(requiredCount, 16));
@@ -59,10 +91,10 @@ public abstract class InstancedRendererBase : MonoBehaviour
             _accumMatrices = new Matrix4x4[newCap];
         else
             System.Array.Resize(ref _accumMatrices, newCap);
-        if (data == null)
-            data = new T[newCap];
+        if (_accumData == null)
+            _accumData = new TData[newCap];
         else
-            System.Array.Resize(ref data, newCap);
+            System.Array.Resize(ref _accumData, newCap);
     }
 
     protected static int Align16(int n) => (n + 15) & ~15;
@@ -94,7 +126,7 @@ public abstract class InstancedRendererBase : MonoBehaviour
             EnsureMatrixBatch(n);
             for (int i = 0; i < n; i++)
                 _matrixBatch[i] = _accumMatrices[offset + i];
-            UploadAccumInstanceData(offset, n);
+            _instanceBuffer.SetData(_accumData, offset, 0, n);
             _mpb.Clear();
             _mpb.SetBuffer(InstanceBufferPropertyId, _instanceBuffer);
             Graphics.DrawMeshInstanced(
@@ -115,11 +147,16 @@ public abstract class InstancedRendererBase : MonoBehaviour
 
     protected virtual void OnEnable()
     {
+        RebuildDrawMaterialFromFields();
         _instancingWarnIssued = false;
         _accumCount = 0;
         _mpb ??= new MaterialPropertyBlock();
         EnsureDefaultMeshIfNull();
     }
+
+#if UNITY_EDITOR
+    protected void OnValidate() => RebuildDrawMaterialFromFields();
+#endif
 
     protected virtual void OnDisable()
     {
@@ -131,6 +168,7 @@ public abstract class InstancedRendererBase : MonoBehaviour
     {
         _accumCount = 0;
         DisposeGpuBuffer();
+        DisposeOwnedDrawMaterial();
     }
 
     protected void EnsureGpuBuffer(int elementCount)
@@ -170,12 +208,12 @@ public abstract class InstancedRendererBase : MonoBehaviour
         if (!_instancingWarnIssued)
         {
             _instancingWarnIssued = true;
-            Debug.LogWarning($"{InstancingWarningSourceName}: material must have GPU Instancing enabled.", this);
+            Debug.LogWarning($"{GetType().Name}: material must have GPU Instancing enabled.", this);
         }
         return false;
     }
 
-    protected void DrawInstancedBatches<T>(Matrix4x4[] matrices, T[] instances, int count, int layer, int bufferPropertyId, int stride) where T : struct
+    protected void DrawInstancedBatches(Matrix4x4[] matrices, TData[] instances, int count, int layer)
     {
         if (_material == null || _mesh == null || count <= 0)
             return;
@@ -183,6 +221,8 @@ public abstract class InstancedRendererBase : MonoBehaviour
             return;
         if (!MaterialInstancingReady())
             return;
+        int stride = InstanceDataStride;
+        int bufferPropertyId = InstanceBufferPropertyId;
         for (int offset = 0; offset < count; offset += kMaxInstancesPerDraw)
         {
             int n = Mathf.Min(kMaxInstancesPerDraw, count - offset);
@@ -213,4 +253,48 @@ public abstract class InstancedRendererBase : MonoBehaviour
                 LightProbeUsage.Off);
         }
     }
+
+    #region public interface
+
+    public void AddInstance(Matrix4x4 matrix, TData data)
+    {
+        EnsureAccumPairCapacity(_accumCount + 1);
+        _accumMatrices[_accumCount] = matrix;
+        _accumData[_accumCount] = data;
+        _accumCount++;
+    }
+
+    public void AddInstances(Matrix4x4[] matrices, TData[] data, int count, int sourceStart = 0)
+    {
+        if (count <= 0)
+            return;
+        if (matrices == null || data == null)
+            return;
+        if (sourceStart < 0 || matrices.Length < sourceStart + count || data.Length < sourceStart + count)
+            return;
+        EnsureAccumPairCapacity(_accumCount + count);
+        for (int i = 0; i < count; i++)
+        {
+            int s = sourceStart + i;
+            _accumMatrices[_accumCount + i] = matrices[s];
+            _accumData[_accumCount + i] = data[s];
+        }
+        _accumCount += count;
+    }
+
+    public void Draw(Matrix4x4[] matrices, TData[] instances, int count, int layer = 0) =>
+        DrawInstancedBatches(matrices, instances, count, layer);
+
+    public void DrawOne(Matrix4x4 matrix, TData data, int layer = 0)
+    {
+        if (_matrixScratch == null)
+            _matrixScratch = new Matrix4x4[1];
+        if (_dataScratch == null)
+            _dataScratch = new TData[1];
+        _matrixScratch[0] = matrix;
+        _dataScratch[0] = data;
+        Draw(_matrixScratch, _dataScratch, 1, layer);
+    }
+
+    #endregion
 }

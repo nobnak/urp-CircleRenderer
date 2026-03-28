@@ -179,11 +179,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0a5d2f4b7e1a6d9c0f3b8e5a2d4c7f1b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RingInstancedRenderer
-  _material: {fileID: 2100000, guid: d3b7e1c508c64e1a9a2f6d0e4b8a3c5d, type: 2}
   _mesh: {fileID: 4300000, guid: 678103f80f69fe84595f53fa966d563e, type: 2}
   _castShadows: 0
   _receiveShadows: 0
   _layer: 0
+  _shader: {fileID: 4800000, guid: e4c8f2a619d54f2a8b3c7d1e5f9a0b1c, type: 3}
 --- !u!1 &107373061
 GameObject:
   m_ObjectHideFlags: 0
@@ -210,7 +210,7 @@ Transform:
   m_GameObject: {fileID: 107373061}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 13.74, y: -1.22, z: 0}
+  m_LocalPosition: {x: 0.91, y: -0.53, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -261,7 +261,7 @@ Transform:
   m_GameObject: {fileID: 271712555}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 5.08, y: 4.66, z: 0}
+  m_LocalPosition: {x: 5.5, y: 4.47, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -280,8 +280,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RingInstance
   _group: {fileID: 42037913}
-  _radius: 4
-  _ringWidth: 2.22
+  _radius: 5.25
+  _ringWidth: 0.28
   _tess: 9.1
   _tessMode: 1
   _debugVis: 1

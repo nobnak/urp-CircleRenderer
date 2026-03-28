@@ -149,11 +149,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 665e8bb5afd98584caeb7dfb1e368201, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CircleInstancedRenderer
-  _material: {fileID: 2100000, guid: 7951df2f7b18eb545b808071854f37a7, type: 2}
   _mesh: {fileID: 4300000, guid: 7bbb881939ca29a4cbcb41cfee19a99a, type: 2}
   _castShadows: 0
   _receiveShadows: 0
   _layer: 0
+  _shader: {fileID: 4800000, guid: 46140a9c881cfea428abf5db3b71bc53, type: 3}
 --- !u!4 &42037912
 Transform:
   m_ObjectHideFlags: 0
@@ -229,7 +229,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CircleInstance
   _group: {fileID: 42037913}
-  _radius: 1.99
+  _radius: 1.75
   _tess: 10.8
   _debugVis: 0
   _tessMode: 1
@@ -573,7 +573,7 @@ Transform:
   m_GameObject: {fileID: 1170350917}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 3.16, y: 2.63, z: 0}
+  m_LocalPosition: {x: 2.48, y: 2.7, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -592,7 +592,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CircleInstance
   _group: {fileID: 42037913}
-  _radius: 3
+  _radius: 3.4
   _tess: 10.8
   _debugVis: 0
   _tessMode: 1
