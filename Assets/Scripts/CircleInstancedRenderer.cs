@@ -1,52 +1,35 @@
 using UnityEngine;
-using UnityEngine.Rendering;
 
-[ExecuteAlways]
+/// <summary>
+/// <c>Custom/CircleInstanced</c> 用。インスタンスデータは <see cref="CircleInstanceData"/>。
+/// </summary>
 [DefaultExecutionOrder(1000)]
-public sealed class CircleInstancedRenderer : MonoBehaviour
+public sealed class CircleInstancedRenderer : InstancedRendererBase
 {
-    const int kMaxInstancesPerDraw = 1023;
-
     static readonly int CircleInstancesId = Shader.PropertyToID("_CircleInstances");
 
-    [SerializeField] Material _material;
-    [SerializeField] Mesh _mesh;
-    [SerializeField] ShadowCastingMode _castShadows = ShadowCastingMode.Off;
-    [SerializeField] bool _receiveShadows;
-    [SerializeField] int _layer;
+    [System.NonSerialized] CircleInstanceData[] _accumData;
+    [System.NonSerialized] Matrix4x4[] _matrixScratch;
+    [System.NonSerialized] CircleInstanceData[] _dataScratch;
 
-    Matrix4x4[] _accumMatrices;
-    CircleInstanceData[] _accumData;
-    int _accumCount;
-    int _accumCapacity;
+    protected override int InstanceDataStride => CircleInstanceData.Stride;
+    protected override int InstanceBufferPropertyId => CircleInstancesId;
+    protected override string InstancingWarningSourceName => nameof(CircleInstancedRenderer);
 
-    GraphicsBuffer _instanceBuffer;
-    int _matrixBatchCapacity;
-    Matrix4x4[] _matrixBatch;
-    MaterialPropertyBlock _mpb;
-    Matrix4x4[] _matrixScratch;
-    CircleInstanceData[] _dataScratch;
-    bool _instancingWarnIssued;
+    protected override void UploadAccumInstanceData(int sourceOffset, int elementCount) =>
+        _instanceBuffer.SetData(_accumData, sourceOffset, 0, elementCount);
 
-    public Material Material
+    protected override void EnsureDefaultMeshIfNull()
     {
-        get => _material;
-        set => _material = value;
+        if (_mesh == null)
+            _mesh = CirclePatchMesh.Create();
     }
 
-    public Mesh Mesh
-    {
-        get => _mesh;
-        set => _mesh = value;
-    }
-
-    public int AccumulatedCount => _accumCount;
-
-    public void ClearFrameInstances() => _accumCount = 0;
+    void LateUpdate() => DrawAccumulatedFrame();
 
     public void AddInstance(Matrix4x4 matrix, CircleInstanceData data)
     {
-        EnsureAccumCapacity(_accumCount + 1);
+        EnsureAccumPairCapacity(ref _accumData, _accumCount + 1);
         _accumMatrices[_accumCount] = matrix;
         _accumData[_accumCount] = data;
         _accumCount++;
@@ -60,7 +43,7 @@ public sealed class CircleInstancedRenderer : MonoBehaviour
             return;
         if (sourceStart < 0 || matrices.Length < sourceStart + count || data.Length < sourceStart + count)
             return;
-        EnsureAccumCapacity(_accumCount + count);
+        EnsureAccumPairCapacity(ref _accumData, _accumCount + count);
         for (int i = 0; i < count; i++)
         {
             int s = sourceStart + i;
@@ -70,160 +53,8 @@ public sealed class CircleInstancedRenderer : MonoBehaviour
         _accumCount += count;
     }
 
-    void LateUpdate()
-    {
-        int count = _accumCount;
-        if (count <= 0 || _material == null || _mesh == null)
-        {
-            _accumCount = 0;
-            return;
-        }
-        if (!MaterialInstancingReady())
-        {
-            _accumCount = 0;
-            return;
-        }
-        for (int offset = 0; offset < count; offset += kMaxInstancesPerDraw)
-        {
-            int n = Mathf.Min(kMaxInstancesPerDraw, count - offset);
-            EnsureGpuBuffer(n);
-            EnsureMatrixBatch(n);
-            _instanceBuffer.SetData(_accumData, offset, 0, n);
-            for (int i = 0; i < n; i++)
-                _matrixBatch[i] = _accumMatrices[offset + i];
-            _mpb.Clear();
-            _mpb.SetBuffer(CircleInstancesId, _instanceBuffer);
-            Graphics.DrawMeshInstanced(
-                _mesh,
-                0,
-                _material,
-                _matrixBatch,
-                n,
-                _mpb,
-                _castShadows,
-                _receiveShadows,
-                _layer,
-                null,
-                LightProbeUsage.Off);
-        }
-        _accumCount = 0;
-    }
-
-    void OnEnable()
-    {
-        _instancingWarnIssued = false;
-        _accumCount = 0;
-        if (_mesh == null)
-            _mesh = CirclePatchMesh.Create();
-        _mpb ??= new MaterialPropertyBlock();
-    }
-
-    void OnDisable()
-    {
-        _accumCount = 0;
-        DisposeBuffer();
-    }
-
-    void OnDestroy()
-    {
-        _accumCount = 0;
-        DisposeBuffer();
-    }
-
-    static int Align16(int n) => (n + 15) & ~15;
-
-    static int AlignedDrawBatchCapacity(int minElements)
-    {
-        minElements = Mathf.Clamp(minElements, 1, kMaxInstancesPerDraw);
-        int a = Align16(minElements);
-        return Mathf.Min(a, kMaxInstancesPerDraw);
-    }
-
-    void EnsureAccumCapacity(int requiredCount)
-    {
-        int newCap = Align16(Mathf.Max(requiredCount, 16));
-        if (_accumMatrices != null && _accumData != null && _accumMatrices.Length >= newCap && _accumData.Length >= newCap)
-        {
-            _accumCapacity = newCap;
-            return;
-        }
-        System.Array.Resize(ref _accumMatrices, newCap);
-        System.Array.Resize(ref _accumData, newCap);
-        _accumCapacity = newCap;
-    }
-
-    void EnsureGpuBuffer(int elementCount)
-    {
-        int stride = CircleInstanceData.Stride;
-        int cap = AlignedDrawBatchCapacity(elementCount);
-        if (_instanceBuffer != null && _instanceBuffer.count == cap && _instanceBuffer.stride == stride)
-            return;
-        _instanceBuffer?.Dispose();
-        _instanceBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, cap, stride);
-    }
-
-    void EnsureMatrixBatch(int forCount)
-    {
-        int cap = AlignedDrawBatchCapacity(forCount);
-        if (_matrixBatch != null && _matrixBatchCapacity >= cap)
-            return;
-        _matrixBatch = new Matrix4x4[cap];
-        _matrixBatchCapacity = cap;
-    }
-
-    void DisposeBuffer()
-    {
-        _instanceBuffer?.Dispose();
-        _instanceBuffer = null;
-    }
-
-    bool MaterialInstancingReady()
-    {
-        if (_material != null && _material.enableInstancing)
-        {
-            _instancingWarnIssued = false;
-            return true;
-        }
-        if (!_instancingWarnIssued)
-        {
-            _instancingWarnIssued = true;
-            Debug.LogWarning($"{nameof(CircleInstancedRenderer)}: material must have GPU Instancing enabled.", this);
-        }
-        return false;
-    }
-
-    public void Draw(Matrix4x4[] matrices, CircleInstanceData[] instances, int count, int layer = 0)
-    {
-        if (_material == null || _mesh == null || count <= 0)
-            return;
-        if (matrices == null || instances == null || matrices.Length < count || instances.Length < count)
-            return;
-        if (!MaterialInstancingReady())
-            return;
-        for (int offset = 0; offset < count; offset += kMaxInstancesPerDraw)
-        {
-            int n = Mathf.Min(kMaxInstancesPerDraw, count - offset);
-            EnsureGpuBuffer(n);
-            EnsureMatrixBatch(n);
-            _instanceBuffer.SetData(instances, offset, 0, n);
-            for (int i = 0; i < n; i++)
-                _matrixBatch[i] = matrices[offset + i];
-            _mpb.Clear();
-            _mpb.SetBuffer(CircleInstancesId, _instanceBuffer);
-            Graphics.DrawMeshInstanced(
-                _mesh,
-                0,
-                _material,
-                _matrixBatch,
-                n,
-                _mpb,
-                _castShadows,
-                _receiveShadows,
-                layer,
-                null,
-                LightProbeUsage.Off);
-        }
-    }
+    public void Draw(Matrix4x4[] matrices, CircleInstanceData[] instances, int count, int layer = 0) =>
+        DrawInstancedBatches(matrices, instances, count, layer, CircleInstancesId, CircleInstanceData.Stride);
 
     public void DrawOne(Matrix4x4 matrix, CircleInstanceData instance, int layer = 0)
     {
