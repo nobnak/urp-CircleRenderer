@@ -37,7 +37,7 @@ Shader "Custom/CircleInstanced"
             #define UNITY_GET_INSTANCE_ID(input) 0u
             #endif
 
-            #include "Assets/Shaders/Includes/CircleShared.hlsl"
+            #include "Packages/jp.nobnak.circle/Shaders/Includes/CircleShared.hlsl"
 
             struct CircleInstanceData
             {

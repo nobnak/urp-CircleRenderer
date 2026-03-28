@@ -48,7 +48,7 @@ Shader "Custom/Circle"
                 UNITY_DEFINE_INSTANCED_PROP(float4, _Color)
                 UNITY_DEFINE_INSTANCED_PROP(float, _DebugVis)
             UNITY_INSTANCING_BUFFER_END(UnityPerMaterial)
-            #include "Assets/Shaders/Includes/CircleShared.hlsl"
+            #include "Packages/jp.nobnak.circle/Shaders/Includes/CircleShared.hlsl"
 
             ControlPoint Vert(Attributes input)
             {
