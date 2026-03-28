@@ -109,3 +109,28 @@ Three sectors per patch (center A on the circle, B/C on the circumference). `Cir
 `#pragma target 5.0`, hull / domain / fragment. Instance data is read from `_CircleInstances` via `UNITY_GET_INSTANCE_ID`.
 
 ---
+
+## 3. Ring
+
+Shaders: `Custom/Ring`, `Custom/RingInstanced`.
+
+### 3.1 `RingPatchMesh`
+
+For `Custom/Ring`: three quads, `MeshTopology.Quads`. Vertices sit on circles with **inner radius 1 and outer radius 2**. `Ring.shader` `Vert` scales them to the actual `rIn` / `rOut`.
+
+- **Second UV channel** (`uv2`) **x** holds the sector index (0, 1, 2). The shader reads it as `TEXCOORD1` (`sectorPack.x`).
+
+### 3.2 `Ring.shader` (quad tessellation)
+
+Quad `SV_TessFactor` follows **UV edges**, not control-point order: `[0]=u==0`, `[1]=v==0`, `[2]=u==1`, `[3]=v==1`. `v==0` is the inner arc (V0–V1), `v==1` the outer arc (V2–V3). `u==0` / `u==1` are radial (V3–V0, V1–V2).
+
+### 3.3 `RingInstanceData` / `RingInstance`
+
+- `RingTessMode` / `RingDebugVis` align with the shader; enums are stored in matching float fields on the GPU.  
+- Layout must match `StructuredBuffer<RingInstanceData>` (`_RingInstances`) in `Custom/RingInstanced`.
+
+### 3.4 `RingInstanced.shader`
+
+Instance data is read from `_RingInstances`.
+
+---
