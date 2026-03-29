@@ -1,6 +1,6 @@
 {
   "name": "jp.nobnak.circle",
-  "version": "0.11.0",
+  "version": "0.1.2",
   "displayName": "Circle Renderer (URP)",
   "description": "Circle and ring patch mesh with tessellation shaders and GPU instancing for URP.",
   "unity": "6000.0",
