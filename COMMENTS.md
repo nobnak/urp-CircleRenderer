@@ -17,7 +17,7 @@ Design notes, shader conventions, and file map for maintainers. The package live
 
 Per-instance data lives in a `ComputeBuffer` (`ComputeBufferType.Structured`), bound with `MaterialPropertyBlock.SetBuffer`, and drawn with `Graphics.DrawMeshInstanced`. `LightProbeUsage.Off` is set.
 
-Circles use `Custom/CircleInstanced`, rings use `Custom/RingInstanced`. Logic is shared in `InstancedRendererBase<TData>`; concrete types differ only in `TData`, the buffer `PropertyToID`, the fallback shader name, and default mesh creation.
+Circles use `jp.nobnak.circle/Circle/Instanced`, rings use `jp.nobnak.circle/Ring/Instanced`. Logic is shared in `InstancedRendererBase<TData>`; concrete types differ only in `TData`, the buffer `PropertyToID`, the fallback shader name, and default mesh creation.
 
 ### 1.2 `InstancedRendererBase<TData>`
 
@@ -39,7 +39,7 @@ Circles use `Custom/CircleInstanced`, rings use `Custom/RingInstanced`. Logic is
 | ----------------------------- | -------------------------- | ------------------------ |
 | `TData`                       | `CircleInstanceData`       | `RingInstanceData`       |
 | `InstanceBufferPropertyId`    | `_CircleInstances`         | `_RingInstances`         |
-| `FallbackInstancedShaderName` | `Custom/CircleInstanced`   | `Custom/RingInstanced`   |
+| `FallbackInstancedShaderName` | `jp.nobnak.circle/Circle/Instanced` | `jp.nobnak.circle/Ring/Instanced` |
 | `EnsureDefaultMeshIfNull`     | `CirclePatchMesh.Create()` | `RingPatchMesh.Create()` |
 
 **Public members (base)**
@@ -76,17 +76,17 @@ Concrete renderers use `[DefaultExecutionOrder(1000)]`. Intended flow: group `Up
 
 ### 1.6 Instancing vs patch shaders
 
-`CircleInstanceData` / `RingInstanceData` must match each `*Instanced.shader` `StructuredBuffer`. Non-instanced `Circle.shader` / `Ring.shader` (material properties + tessellation) are covered in [§2](#2-circle) and [§3](#3-ring).
+`CircleInstanceData` / `RingInstanceData` must match each `*Instanced.shader` `StructuredBuffer`. Non-instanced `Circle.shader` / `Ring.shader` (opaque; menu **jp.nobnak.circle/…/Opaque**) and transparent variants are covered in [§2](#2-circle) and [§3](#3-ring).
 
 ---
 
 ## 2. Circle
 
-Shaders: `Custom/Circle`, `Custom/CircleInstanced`.
+Shaders: `jp.nobnak.circle/Circle/Opaque`, `jp.nobnak.circle/Circle/Transparent`, `jp.nobnak.circle/Circle/Instanced`, `jp.nobnak.circle/Circle/Instanced Transparent`.
 
 ### 2.1 `CirclePatchMesh`
 
-For `Custom/Circle`: a three-sector triangle patch.
+For `jp.nobnak.circle/Circle/Opaque` (see `Circle.shader`): a three-sector triangle patch.
 
 - `uv.x`: 0 = center A, 1 = B, 2 = C  
 - `uv.y`: sector index
@@ -102,7 +102,7 @@ Three sectors per patch (center A on the circle, B/C on the circumference). `Cir
 ### 2.4 `CircleInstanceData` / `CircleInstance`
 
 - `CircleTessMode` / `CircleDebugVis` mirror shader modes. On the GPU, enum values are stored in **float** fields such as `tessMode` / `debugVis`.  
-- Layout must match `StructuredBuffer<CircleInstanceData>` (`_CircleInstances`) in `Custom/CircleInstanced`.
+- Layout must match `StructuredBuffer<CircleInstanceData>` (`_CircleInstances`) in `jp.nobnak.circle/Circle/Instanced` (and the Instanced Transparent variant).
 
 ### 2.5 `CircleInstanced.shader`
 
@@ -112,11 +112,11 @@ Three sectors per patch (center A on the circle, B/C on the circumference). `Cir
 
 ## 3. Ring
 
-Shaders: `Custom/Ring`, `Custom/RingInstanced`.
+Shaders: `jp.nobnak.circle/Ring/Opaque`, `jp.nobnak.circle/Ring/Transparent`, `jp.nobnak.circle/Ring/Instanced`, `jp.nobnak.circle/Ring/Instanced Transparent`.
 
 ### 3.1 `RingPatchMesh`
 
-For `Custom/Ring`: three quads, `MeshTopology.Quads`. Vertices sit on circles with **inner radius 1 and outer radius 2**. `Ring.shader` `Vert` scales them to the actual `rIn` / `rOut`.
+For `jp.nobnak.circle/Ring/Opaque` (see `Ring.shader`): three quads, `MeshTopology.Quads`. Vertices sit on circles with **inner radius 1 and outer radius 2**. `Ring.shader` `Vert` scales them to the actual `rIn` / `rOut`.
 
 - **Second UV channel** (`uv2`) **x** holds the sector index (0, 1, 2). The shader reads it as `TEXCOORD1` (`sectorPack.x`).
 
@@ -127,7 +127,7 @@ Quad `SV_TessFactor` follows **UV edges**, not control-point order: `[0]=u==0`, 
 ### 3.3 `RingInstanceData` / `RingInstance`
 
 - `RingTessMode` / `RingDebugVis` align with the shader; enums are stored in matching float fields on the GPU.  
-- Layout must match `StructuredBuffer<RingInstanceData>` (`_RingInstances`) in `Custom/RingInstanced`.
+- Layout must match `StructuredBuffer<RingInstanceData>` (`_RingInstances`) in `jp.nobnak.circle/Ring/Instanced` (and the Instanced Transparent variant).
 
 ### 3.4 `RingInstanced.shader`
 

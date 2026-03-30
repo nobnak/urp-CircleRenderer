@@ -15,7 +15,7 @@
 
 - **Tessellation** — Triangle patches (filled circle) and quad patches (ring); control tessellation along the arc.
 - **Instancing** — Components that draw many instances with `Graphics.DrawMeshInstanced` and structured buffers.
-- **URP** — Shaders `Custom/Circle`, `Custom/Ring`, plus `*Instanced` variants on the Universal Render Pipeline.
+- **URP** — Shaders are grouped under **jp.nobnak.circle** in the shader menu: **Circle** and **Ring**, each with **Opaque**, **Transparent**, **Instanced**, and **Instanced Transparent** entries.
 
 Implementation details and design notes live in [COMMENTS.md](COMMENTS.md).
 
@@ -58,7 +58,7 @@ Or use **Add package by name** and enter:
 
 | Area | Summary |
 | ---- | ------- |
-| Shaders | `Custom/Circle`, `Custom/Ring` (tessellated), `Custom/CircleInstanced`, `Custom/RingInstanced` |
+| Shaders | Tessellated patch shaders: `jp.nobnak.circle/Circle/…` and `jp.nobnak.circle/Ring/…` (Opaque, Transparent, Instanced, Instanced Transparent) |
 | Runtime | `CircleInstancedRenderer` / `RingInstancedRenderer`, `CircleInstance` / `RingInstance`, group components |
 | Meshes | `CirclePatchMesh` / `RingPatchMesh` and mesh assets creatable from editor menus |
 | Shared HLSL | `CircleShared.hlsl` (shared circle-side logic) |
