@@ -1,4 +1,4 @@
-Shader "Custom/CircleInstanced"
+Shader "jp.nobnak.circle/Circle/Instanced"
 {
     Properties {}
     SubShader

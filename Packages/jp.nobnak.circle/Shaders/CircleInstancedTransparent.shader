@@ -1,4 +1,4 @@
-Shader "Custom/CircleInstanced Transparent"
+Shader "jp.nobnak.circle/Circle/Instanced Transparent"
 {
     Properties
     {

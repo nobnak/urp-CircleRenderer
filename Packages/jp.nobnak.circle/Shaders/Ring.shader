@@ -1,4 +1,4 @@
-Shader "Custom/Ring"
+Shader "jp.nobnak.circle/Ring/Opaque"
 {
     Properties
     {

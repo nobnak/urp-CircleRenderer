@@ -1,4 +1,4 @@
-Shader "Custom/Circle"
+Shader "jp.nobnak.circle/Circle/Opaque"
 {
     Properties
     {

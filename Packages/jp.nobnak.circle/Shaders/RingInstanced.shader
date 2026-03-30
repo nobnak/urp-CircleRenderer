@@ -1,4 +1,4 @@
-Shader "Custom/RingInstanced"
+Shader "jp.nobnak.circle/Ring/Instanced"
 {
     Properties {}
     SubShader
