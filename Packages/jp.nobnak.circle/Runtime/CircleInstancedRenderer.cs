@@ -6,7 +6,7 @@ public sealed class CircleInstancedRenderer : InstancedRendererBase<CircleInstan
     static readonly int CircleInstancesId = Shader.PropertyToID("_CircleInstances");
 
     protected override int InstanceBufferPropertyId => CircleInstancesId;
-    protected override string FallbackInstancedShaderName => "Custom/CircleInstanced";
+    protected override string FallbackInstancedShaderName => "jp.nobnak.circle/Circle/Instanced";
 
     protected override void EnsureDefaultMeshIfNull()
     {

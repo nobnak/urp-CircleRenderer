@@ -6,7 +6,7 @@ public sealed class RingInstancedRenderer : InstancedRendererBase<RingInstanceDa
     static readonly int RingInstancesId = Shader.PropertyToID("_RingInstances");
 
     protected override int InstanceBufferPropertyId => RingInstancesId;
-    protected override string FallbackInstancedShaderName => "Custom/RingInstanced";
+    protected override string FallbackInstancedShaderName => "jp.nobnak.circle/Ring/Instanced";
 
     protected override void EnsureDefaultMeshIfNull()
     {
