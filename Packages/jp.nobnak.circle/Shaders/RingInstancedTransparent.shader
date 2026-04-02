@@ -3,6 +3,7 @@ Shader "jp.nobnak.circle/Ring/Instanced Transparent"
     Properties
     {
         [Header(Blend)]
+        [Enum(UnityEngine.Rendering.CullMode)] _Cull ("Cull Mode", Float) = 2
         [Enum(UnityEngine.Rendering.BlendMode)] _SrcBlend ("Src Blend", Float) = 5
         [Enum(UnityEngine.Rendering.BlendMode)] _DstBlend ("Dst Blend", Float) = 10
     }
@@ -18,7 +19,7 @@ Shader "jp.nobnak.circle/Ring/Instanced Transparent"
         {
             Name "ForwardUnlit"
             Tags { "LightMode" = "UniversalForward" }
-            Cull Back
+            Cull [_Cull]
             ZWrite Off
             Blend [_SrcBlend] [_DstBlend]
 

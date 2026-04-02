@@ -1,6 +1,9 @@
 Shader "jp.nobnak.circle/Ring/Instanced"
 {
-    Properties {}
+    Properties
+    {
+        [Enum(UnityEngine.Rendering.CullMode)] _Cull ("Cull Mode", Float) = 2
+    }
     SubShader
     {
         Tags
@@ -13,7 +16,7 @@ Shader "jp.nobnak.circle/Ring/Instanced"
         {
             Name "ForwardUnlit"
             Tags { "LightMode" = "UniversalForward" }
-            Cull Back
+            Cull [_Cull]
 
             HLSLPROGRAM
             #pragma target 5.0

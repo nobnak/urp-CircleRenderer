@@ -5,6 +5,7 @@ Shader "jp.nobnak.circle/Circle/Transparent"
         _Radius ("Radius", Float) = 0.5
         _Tess ("Arc Tessellation (BC)", Range(1, 64)) = 16
         [Enum(Fixed,0,Log Distance,1)] _TessMode ("Tessellation Mode", Float) = 1
+        [Enum(UnityEngine.Rendering.CullMode)] _Cull ("Cull Mode", Float) = 2
         _Color ("Color", Color) = (1, 1, 1, 1)
         [Enum(Off,0,Barycentric,1)] _DebugVis ("Debug: Patch Barycentric (R=A,G=B,B=C)", Float) = 0
         [Header(Blend)]
@@ -23,7 +24,7 @@ Shader "jp.nobnak.circle/Circle/Transparent"
         {
             Name "ForwardUnlit"
             Tags { "LightMode" = "UniversalForward" }
-            Cull Back
+            Cull [_Cull]
             ZWrite Off
             Blend [_SrcBlend] [_DstBlend]
 
