@@ -2,8 +2,15 @@
 
 **Circle and ring** rendering for **URP** via the embedded package `jp.nobnak.circle`: patch meshes, tessellation, and GPU instancing.
 
+## Demo
+
+Package usage in Unity (instancing, tessellated circles/rings). Click the thumbnail to open the video.
+
+[![Package demo — watch on YouTube](https://img.youtube.com/vi/9zCeDww_M2Y/hqdefault.jpg)](https://youtu.be/9zCeDww_M2Y)
+
 ## Table of contents
 
+- [Demo](#demo)
 - [Overview](#overview)
 - [Requirements](#requirements)
 - [Installation](#installation-openupm)
@@ -63,7 +70,7 @@ Or use **Add package by name** and enter:
 | Meshes | `CirclePatchMesh` / `RingPatchMesh` and mesh assets creatable from editor menus |
 | Shared HLSL | `CircleShared.hlsl` (shared circle-side logic) |
 
-Sample scenes in this repository: `Assets/Scenes/` (e.g. `Circle.unity`, `Ring.unity`).
+This repository also includes sample scenes under `Assets/Scenes/`: `Circle.unity`, `Loop.unity`, `PointGrid.unity`.
 
 ## Package layout
 

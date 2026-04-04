@@ -7,14 +7,14 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: Custom_Circle
-  m_Shader: {fileID: 4800000, guid: 81490b0a45df3614caf0d12dfdd74edf, type: 3}
+  m_Name: Ring
+  m_Shader: {fileID: 4800000, guid: 2ca02e5629b65864b9f094b0cc66c309, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
   m_InvalidKeywords: []
   m_LightmapFlags: 4
-  m_EnableInstancingVariants: 1
+  m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
   m_CustomRenderQueue: -1
   stringTagMap: {}
@@ -25,11 +25,13 @@ Material:
     m_TexEnvs: []
     m_Ints: []
     m_Floats:
+    - _Cull: 2
     - _DebugVis: 0
-    - _Radius: 5
-    - _Tess: 9.4
+    - _Radius: 4
+    - _RingWidth: 1
+    - _Tess: 16
     - _TessMode: 1
     m_Colors:
-    - _Color: {r: 0.22300005, g: 0.6373999, b: 1, a: 1}
+    - _Color: {r: 0.2532427, g: 0.6698113, b: 0.18009077, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
