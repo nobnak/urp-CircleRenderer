@@ -25,7 +25,7 @@ Instancing and tessellated circles/rings in Unity. Click the thumbnail to open Y
 
 Animated comparison of **ring** output while arc tessellation subdivision goes from **1** to **64** (how smoothness changes with patch density).
 
-![Ring output vs tessellation subdivision 1 → 64](Docs/Images/ring_tessellation_sequence.webp)
+<img src="Docs/Images/ring_tessellation_sequence.webp" alt="Ring output vs tessellation subdivision 1 → 64" width="640">
 
 ## Table of contents
 
