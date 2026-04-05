@@ -2,18 +2,38 @@
 
 **Circle and ring** rendering for **URP** via the embedded package `jp.nobnak.circle`: patch meshes, tessellation, and GPU instancing.
 
+This repo is a **Unity 6000.0+** project with that package embedded at `Packages/jp.nobnak.circle/`. Clone it, open the folder in Unity, then open a sample scene under `Assets/Scenes/` to try the shaders and instancing.
+
+To use the renderer **in another project**, install **`jp.nobnak.circle`** from OpenUPM ([steps below](#installation-openupm)).
+
+## Quick start
+
+| Goal | What to do |
+| ---- | ---------- |
+| Explore samples in **this** repo | Open Unity **6000.0+** with URP, then **File → Open Scene** and pick `Assets/Scenes/Circle.unity`, `Ring.unity`, or `PointGrid.unity`. Only **PointGrid** is listed in **File → Build Settings** by default. |
+| Add the package to **your** project | Add the OpenUPM scoped registry and install **`jp.nobnak.circle`** (see [Installation (OpenUPM)](#installation-openupm)). |
+
 ## Demo
 
-Package usage in Unity (instancing, tessellated circles/rings). Click the thumbnail to open the video.
+### Package overview (video)
+
+Instancing and tessellated circles/rings in Unity. Click the thumbnail to open YouTube.
 
 [![Package demo — watch on YouTube](https://img.youtube.com/vi/9zCeDww_M2Y/hqdefault.jpg)](https://youtu.be/9zCeDww_M2Y)
 
+### Tessellation along the arc (1 → 64)
+
+Animated comparison of **ring** output while arc tessellation subdivision goes from **1** to **64** (how smoothness changes with patch density).
+
+![Ring output vs tessellation subdivision 1 → 64](Docs/Images/ring_tessellation_sequence.webp)
+
 ## Table of contents
 
+- [Quick start](#quick-start)
 - [Demo](#demo)
 - [Overview](#overview)
 - [Requirements](#requirements)
-- [Installation](#installation-openupm)
+- [Installation (OpenUPM)](#installation-openupm)
 - [What you get](#what-you-get)
 - [Package layout](#package-layout)
 - [Further documentation](#further-documentation)
@@ -22,15 +42,15 @@ Package usage in Unity (instancing, tessellated circles/rings). Click the thumbn
 
 - **Tessellation** — Triangle patches (filled circle) and quad patches (ring); control tessellation along the arc.
 - **Instancing** — Components that draw many instances with `Graphics.DrawMeshInstanced` and structured buffers.
-- **URP** — Shaders are grouped under **jp.nobnak.circle** in the shader menu: **Circle** and **Ring**, each with **Opaque**, **Transparent**, **Instanced**, and **Instanced Transparent** entries.
+- **URP** — Shaders appear under **jp.nobnak.circle** in the shader menu: **Circle** and **Ring**, each with **Opaque**, **Transparent**, **Instanced**, and **Instanced Transparent** variants.
 
-Implementation details and design notes live in [COMMENTS.md](COMMENTS.md).
+Implementation details and design notes: [COMMENTS.md](COMMENTS.md).
 
 ## Requirements
 
-- **Unity 6000.0 or later** (see the `unity` field in `Packages/jp.nobnak.circle/package.json`)
+- **Unity 6000.0 or later** — see the `unity` field in `Packages/jp.nobnak.circle/package.json`
 - **Universal RP** — match the package dependency (e.g. `com.unity.render-pipelines.universal` **17.4.0**)
-- **Shader Model 5.0** — platform must support hull/domain tessellation
+- **Shader Model 5.0** — target platform must support hull/domain tessellation
 
 ## Installation (OpenUPM)
 
@@ -66,11 +86,11 @@ Or use **Add package by name** and enter:
 | Area | Summary |
 | ---- | ------- |
 | Shaders | Tessellated patch shaders: `jp.nobnak.circle/Circle/…` and `jp.nobnak.circle/Ring/…` (Opaque, Transparent, Instanced, Instanced Transparent) |
-| Runtime | `CircleInstancedRenderer` / `RingInstancedRenderer`, `CircleInstance` / `RingInstance`, group components |
-| Meshes | `CirclePatchMesh` / `RingPatchMesh` and mesh assets creatable from editor menus |
+| Runtime | `CircleInstancedRenderer` / `RingInstancedRenderer`, `CircleInstance` / `RingInstance`, `CircleInstancedGroup` / `RingInstancedGroup`, and related data types |
+| Meshes | `CirclePatchMesh` / `RingPatchMesh` and mesh assets from editor menus |
 | Shared HLSL | `CircleShared.hlsl` (shared circle-side logic) |
 
-This repository also includes sample scenes under `Assets/Scenes/`: `Circle.unity`, `Loop.unity`, `PointGrid.unity`.
+Sample scenes (this repo): `Assets/Scenes/Circle.unity`, `Ring.unity`, `PointGrid.unity`.
 
 ## Package layout
 
