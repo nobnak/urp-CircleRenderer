@@ -2,7 +2,7 @@
 
 **Circle and ring** rendering for **URP** via the embedded package `jp.nobnak.circle`: patch meshes, tessellation, and GPU instancing.
 
-This repo is a **Unity 6000.0+** project with that package embedded at `Packages/jp.nobnak.circle/`. Clone it, open the folder in Unity, then open a sample scene under `Assets/Scenes/` to try the shaders and instancing.
+The **urp-CircleRenderer** repo is a **Unity 6000.0+** project with that package embedded at `Packages/jp.nobnak.circle/`. Clone it, open the folder in Unity, then open a sample scene under `Assets/Scenes/` to try the shaders and instancing.
 
 To use the renderer **in another project**, install **`jp.nobnak.circle`** from OpenUPM ([steps below](#installation-openupm)).
 
