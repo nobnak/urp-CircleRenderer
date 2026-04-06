@@ -1,4 +1,4 @@
-# urp-CircleRenderer
+# Circle as a Tessellation
 
 **Circle and ring** rendering for **URP** via the embedded package `jp.nobnak.circle`: patch meshes, tessellation, and GPU instancing.
 
