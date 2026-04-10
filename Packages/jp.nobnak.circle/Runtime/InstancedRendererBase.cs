@@ -5,6 +5,12 @@ using UnityEngine.Rendering;
 [ExecuteAlways]
 public abstract class InstancedRendererBase<TData> : MonoBehaviour where TData : struct
 {
+    /// <summary>Unity の行列インスタンシング（objectToWorld + worldToObject）の CB 上限により、
+    /// 1 回の <see cref="Graphics.DrawMeshInstanced"/> が内部で 512 インスタンス単位に分割される。
+    /// <see cref="StructuredBuffer"/> をフル長で渡すとサブドローごとに <c>SV_InstanceID</c> が 0 から振り直され、
+    /// 513 番目以降で PerInstance データと行列がずれるため、CPU 側も同じ粒度で分割する。</summary>
+    protected const int kMaxGpuInstancesPerDraw = 512;
+
     protected const int kMaxInstancesPerDraw = 1023;
 
     [SerializeField] protected Mesh _mesh;
@@ -119,9 +125,9 @@ public abstract class InstancedRendererBase<TData> : MonoBehaviour where TData :
             _accumCount = 0;
             return;
         }
-        for (int offset = 0; offset < count; offset += kMaxInstancesPerDraw)
+        for (int offset = 0; offset < count; offset += kMaxGpuInstancesPerDraw)
         {
-            int n = Mathf.Min(kMaxInstancesPerDraw, count - offset);
+            int n = Mathf.Min(kMaxGpuInstancesPerDraw, count - offset);
             EnsureGpuBuffer(n);
             EnsureMatrixBatch(n);
             for (int i = 0; i < n; i++)
@@ -223,9 +229,9 @@ public abstract class InstancedRendererBase<TData> : MonoBehaviour where TData :
             return;
         int stride = InstanceDataStride;
         int bufferPropertyId = InstanceBufferPropertyId;
-        for (int offset = 0; offset < count; offset += kMaxInstancesPerDraw)
+        for (int offset = 0; offset < count; offset += kMaxGpuInstancesPerDraw)
         {
-            int n = Mathf.Min(kMaxInstancesPerDraw, count - offset);
+            int n = Mathf.Min(kMaxGpuInstancesPerDraw, count - offset);
             int cap = AlignedDrawBatchCapacity(n);
             if (_instanceBuffer == null || _instanceBuffer.count != cap || _instanceBufferStride != stride)
             {
