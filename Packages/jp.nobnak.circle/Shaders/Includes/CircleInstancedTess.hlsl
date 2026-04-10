@@ -17,11 +17,13 @@ struct CircleInstanceData
     float4 color;
 };
 
+uint _InstanceBufferBase;
+
 StructuredBuffer<CircleInstanceData> _CircleInstances;
 
 CircleInstanceData LoadInstance(uint iid)
 {
-    return _CircleInstances[iid];
+    return _CircleInstances[_InstanceBufferBase + iid];
 }
 
 ControlPoint Vert(Attributes input)

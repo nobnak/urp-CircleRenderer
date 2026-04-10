@@ -5,13 +5,15 @@ using UnityEngine.Rendering;
 [ExecuteAlways]
 public abstract class InstancedRendererBase<TData> : MonoBehaviour where TData : struct
 {
-    /// <summary>Unity の行列インスタンシング（objectToWorld + worldToObject）の CB 上限により、
-    /// 1 回の <see cref="Graphics.DrawMeshInstanced"/> が内部で 512 インスタンス単位に分割される。
-    /// <see cref="StructuredBuffer"/> をフル長で渡すとサブドローごとに <c>SV_InstanceID</c> が 0 から振り直され、
-    /// 513 番目以降で PerInstance データと行列がずれるため、CPU 側も同じ粒度で分割する。</summary>
-    protected const int kMaxGpuInstancesPerDraw = 512;
+    /// <summary>既定の行列インスタンシングは objectToWorld + worldToObject のため、1 回の
+    /// <see cref="Graphics.DrawMeshInstanced"/> は最大 511 インスタンスに分割する。
+    /// 全インスタンスの <see cref="TData"/> は 1 本の <see cref="ComputeBuffer"/> に連続配置し（容量は 511 の倍数、不足時のみ拡張）、
+    /// 各バッチで <c>_InstanceBufferBase</c> に先頭インデックスを渡して <c>SV_InstanceID</c> と合成する。</summary>
+    protected const int kMaxGpuInstancesPerDraw = 511;
 
     protected const int kMaxInstancesPerDraw = 1023;
+
+    protected static readonly int InstanceBufferBaseId = Shader.PropertyToID("_InstanceBufferBase");
 
     [SerializeField] protected Mesh _mesh;
     [SerializeField] protected ShadowCastingMode _castShadows = ShadowCastingMode.Off;
@@ -112,6 +114,28 @@ public abstract class InstancedRendererBase<TData> : MonoBehaviour where TData :
         return Mathf.Min(a, kMaxInstancesPerDraw);
     }
 
+    /// <summary>実インスタンス数に対し、<see cref="kMaxGpuInstancesPerDraw"/> の倍数に切り上げた要素数（GPU バッファ長）。</summary>
+    protected static int InstanceBufferAlignedElementCount(int instanceCount)
+    {
+        if (instanceCount <= 0)
+            return 0;
+        int m = kMaxGpuInstancesPerDraw;
+        return ((instanceCount + m - 1) / m) * m;
+    }
+
+    protected void EnsureSharedInstanceBuffer(int requiredInstanceCount)
+    {
+        int stride = InstanceDataStride;
+        int needed = InstanceBufferAlignedElementCount(requiredInstanceCount);
+        if (needed <= 0)
+            return;
+        if (_instanceBuffer != null && _instanceBuffer.count >= needed && _instanceBufferStride == stride)
+            return;
+        _instanceBuffer?.Release();
+        _instanceBuffer = new ComputeBuffer(needed, stride, ComputeBufferType.Structured);
+        _instanceBufferStride = stride;
+    }
+
     protected void DrawAccumulatedFrame()
     {
         int count = _accumCount;
@@ -125,16 +149,18 @@ public abstract class InstancedRendererBase<TData> : MonoBehaviour where TData :
             _accumCount = 0;
             return;
         }
+        EnsureSharedInstanceBuffer(count);
+        _instanceBuffer.SetData(_accumData, 0, 0, count);
+        int bufferId = InstanceBufferPropertyId;
         for (int offset = 0; offset < count; offset += kMaxGpuInstancesPerDraw)
         {
             int n = Mathf.Min(kMaxGpuInstancesPerDraw, count - offset);
-            EnsureGpuBuffer(n);
             EnsureMatrixBatch(n);
             for (int i = 0; i < n; i++)
                 _matrixBatch[i] = _accumMatrices[offset + i];
-            _instanceBuffer.SetData(_accumData, offset, 0, n);
             _mpb.Clear();
-            _mpb.SetBuffer(InstanceBufferPropertyId, _instanceBuffer);
+            _mpb.SetInt(InstanceBufferBaseId, offset);
+            _mpb.SetBuffer(bufferId, _instanceBuffer);
             Graphics.DrawMeshInstanced(
                 _mesh,
                 0,
@@ -177,17 +203,6 @@ public abstract class InstancedRendererBase<TData> : MonoBehaviour where TData :
         DisposeOwnedDrawMaterial();
     }
 
-    protected void EnsureGpuBuffer(int elementCount)
-    {
-        int stride = InstanceDataStride;
-        int cap = AlignedDrawBatchCapacity(elementCount);
-        if (_instanceBuffer != null && _instanceBuffer.count == cap && _instanceBufferStride == stride)
-            return;
-        _instanceBuffer?.Release();
-        _instanceBuffer = new ComputeBuffer(cap, stride, ComputeBufferType.Structured);
-        _instanceBufferStride = stride;
-    }
-
     protected void EnsureMatrixBatch(int forCount)
     {
         int cap = AlignedDrawBatchCapacity(forCount);
@@ -227,24 +242,18 @@ public abstract class InstancedRendererBase<TData> : MonoBehaviour where TData :
             return;
         if (!MaterialInstancingReady())
             return;
-        int stride = InstanceDataStride;
-        int bufferPropertyId = InstanceBufferPropertyId;
+        int bufferId = InstanceBufferPropertyId;
+        EnsureSharedInstanceBuffer(count);
+        _instanceBuffer.SetData(instances, 0, 0, count);
         for (int offset = 0; offset < count; offset += kMaxGpuInstancesPerDraw)
         {
             int n = Mathf.Min(kMaxGpuInstancesPerDraw, count - offset);
-            int cap = AlignedDrawBatchCapacity(n);
-            if (_instanceBuffer == null || _instanceBuffer.count != cap || _instanceBufferStride != stride)
-            {
-                _instanceBuffer?.Release();
-                _instanceBuffer = new ComputeBuffer(cap, stride, ComputeBufferType.Structured);
-                _instanceBufferStride = stride;
-            }
             EnsureMatrixBatch(n);
-            _instanceBuffer.SetData(instances, offset, 0, n);
             for (int i = 0; i < n; i++)
                 _matrixBatch[i] = matrices[offset + i];
             _mpb.Clear();
-            _mpb.SetBuffer(bufferPropertyId, _instanceBuffer);
+            _mpb.SetInt(InstanceBufferBaseId, offset);
+            _mpb.SetBuffer(bufferId, _instanceBuffer);
             Graphics.DrawMeshInstanced(
                 _mesh,
                 0,

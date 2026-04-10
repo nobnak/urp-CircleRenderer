@@ -61,11 +61,13 @@ Shader "jp.nobnak.circle/Ring/Instanced Transparent"
                 float4 color;
             };
 
+            uint _InstanceBufferBase;
+
             StructuredBuffer<RingInstanceData> _RingInstances;
 
             RingInstanceData LoadInstance(uint iid)
             {
-                return _RingInstances[iid];
+                return _RingInstances[_InstanceBufferBase + iid];
             }
 
             void RingRadii(RingInstanceData inst, out float rIn, out float rOut)
