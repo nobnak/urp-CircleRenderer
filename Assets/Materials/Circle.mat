@@ -25,8 +25,9 @@ Material:
     m_TexEnvs: []
     m_Ints: []
     m_Floats:
+    - _Cull: 2
     - _DebugVis: 0
-    - _Radius: 5
+    - _Radius: 1
     - _Tess: 9.4
     - _TessMode: 1
     m_Colors:
