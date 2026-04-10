@@ -103,6 +103,7 @@ Shader "jp.nobnak.circle/Circle/Instanced Transparent"
                 Varyings o;
                 o.positionCS = TransformObjectToHClip(posOS);
                 o.patchBary = bary;
+                o.normalWS = TransformObjectToWorldNormal(float3(0.0, 0.0, -1.0));
                 UNITY_TRANSFER_INSTANCE_ID(patch[0], o);
                 return o;
             }

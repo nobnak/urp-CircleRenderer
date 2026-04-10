@@ -31,6 +31,7 @@ struct Varyings
     float4 positionCS : SV_POSITION;
     float3 patchBary : TEXCOORD0;
     UNITY_VERTEX_OUTPUT_INSTANCE_ID
+    float3 normalWS : TEXCOORD2;
 };
 
 struct TessellationFactors

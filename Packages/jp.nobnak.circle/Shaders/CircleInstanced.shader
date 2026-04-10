@@ -12,6 +12,23 @@ Shader "jp.nobnak.circle/Circle/Instanced"
             "RenderPipeline" = "UniversalPipeline"
             "Queue" = "Geometry"
         }
+        HLSLINCLUDE
+        #pragma target 5.0
+        #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+        #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/UnityInstancing.hlsl"
+
+        #ifndef UNITY_VERTEX_OUTPUT_INSTANCE_ID
+        #if defined(UNITY_INSTANCING_ENABLED)
+        #define UNITY_VERTEX_OUTPUT_INSTANCE_ID uint instanceID : TEXCOORD1;
+        #else
+        #define UNITY_VERTEX_OUTPUT_INSTANCE_ID
+        #endif
+        #endif
+        #ifndef UNITY_GET_INSTANCE_ID
+        #define UNITY_GET_INSTANCE_ID(input) 0u
+        #endif
+        ENDHLSL
+
         Pass
         {
             Name "ForwardUnlit"
@@ -19,97 +36,76 @@ Shader "jp.nobnak.circle/Circle/Instanced"
             Cull [_Cull]
 
             HLSLPROGRAM
-            #pragma target 5.0
+            #define PASS_SHADOW 0
+            #include "Packages/jp.nobnak.circle/Shaders/Includes/CircleInstancedTess.hlsl"
             #pragma vertex Vert
             #pragma hull Hull
             #pragma domain Domain
             #pragma fragment Frag
             #pragma multi_compile_instancing
+            ENDHLSL
+        }
 
-            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
-            #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/UnityInstancing.hlsl"
+        Pass
+        {
+            Name "ShadowCaster"
+            Tags { "LightMode" = "ShadowCaster" }
+            ZWrite On
+            ZTest LEqual
+            ColorMask 0
+            Cull [_Cull]
 
-            #ifndef UNITY_VERTEX_OUTPUT_INSTANCE_ID
-            #if defined(UNITY_INSTANCING_ENABLED)
-            #define UNITY_VERTEX_OUTPUT_INSTANCE_ID uint instanceID : TEXCOORD1;
-            #else
-            #define UNITY_VERTEX_OUTPUT_INSTANCE_ID
-            #endif
-            #endif
-            #ifndef UNITY_GET_INSTANCE_ID
-            #define UNITY_GET_INSTANCE_ID(input) 0u
-            #endif
+            HLSLPROGRAM
+            #define PASS_SHADOW 1
+            #include "Packages/jp.nobnak.circle/Shaders/Includes/CircleInstancedTess.hlsl"
+            #pragma vertex Vert
+            #pragma hull Hull
+            #pragma domain Domain
+            #pragma fragment ShadowCasterFrag
+            #pragma multi_compile_instancing
+            #pragma multi_compile_vertex _ _CASTING_PUNCTUAL_LIGHT_SHADOW
+            #pragma multi_compile _ LOD_FADE_CROSSFADE
+            ENDHLSL
+        }
 
-            #include "Packages/jp.nobnak.circle/Shaders/Includes/CircleShared.hlsl"
+        Pass
+        {
+            Name "DepthOnly"
+            Tags { "LightMode" = "DepthOnly" }
+            ZWrite On
+            ColorMask R
+            Cull [_Cull]
 
-            struct CircleInstanceData
-            {
-                float radius;
-                float tess;
-                float debugVis;
-                float tessMode;
-                float4 color;
-            };
+            HLSLPROGRAM
+            #define PASS_SHADOW 0
+            #include "Packages/jp.nobnak.circle/Shaders/Includes/CircleInstancedTess.hlsl"
+            #pragma vertex Vert
+            #pragma hull Hull
+            #pragma domain Domain
+            #pragma fragment DepthOnlyFrag
+            #pragma multi_compile_instancing
+            #pragma multi_compile _ LOD_FADE_CROSSFADE
+            ENDHLSL
+        }
 
-            StructuredBuffer<CircleInstanceData> _CircleInstances;
+        Pass
+        {
+            Name "DepthNormals"
+            Tags { "LightMode" = "DepthNormals" }
+            ZWrite On
+            Cull [_Cull]
 
-            CircleInstanceData LoadInstance(uint iid)
-            {
-                return _CircleInstances[iid];
-            }
-
-
-            ControlPoint Vert(Attributes input)
-            {
-                UNITY_SETUP_INSTANCE_ID(input);
-                uint iid = UNITY_GET_INSTANCE_ID(input);
-                CircleInstanceData inst = LoadInstance(iid);
-                ControlPoint o = BuildControlPoint(input.uv, inst.radius);
-                UNITY_TRANSFER_INSTANCE_ID(input, o);
-                return o;
-            }
-
-            TessellationFactors PatchConstant(InputPatch<ControlPoint, 3> patch)
-            {
-                UNITY_SETUP_INSTANCE_ID(patch[0]);
-                uint iid = UNITY_GET_INSTANCE_ID(patch[0]);
-                CircleInstanceData inst = LoadInstance(iid);
-                float arc = ComputeArcTess(inst.tess, inst.tessMode);
-                return BuildPatchFactors(arc);
-            }
-
-            [domain("tri")]
-            [partitioning("integer")]
-            [outputtopology("triangle_ccw")]
-            [patchconstantfunc("PatchConstant")]
-            [outputcontrolpoints(3)]
-            [maxtessfactor(64.0)]
-            ControlPoint Hull(InputPatch<ControlPoint, 3> patch, uint id : SV_OutputControlPointID)
-            {
-                return patch[id];
-            }
-
-            [domain("tri")]
-            Varyings Domain(TessellationFactors factors, OutputPatch<ControlPoint, 3> patch, float3 bary : SV_DomainLocation)
-            {
-                UNITY_SETUP_INSTANCE_ID(patch[0]);
-                uint iid = UNITY_GET_INSTANCE_ID(patch[0]);
-                float radius = LoadInstance(iid).radius;
-                float3 posOS = EvalDomainPosOS(radius, patch[0].sectorAngles, bary);
-                Varyings o;
-                o.positionCS = TransformObjectToHClip(posOS);
-                o.patchBary = bary;
-                UNITY_TRANSFER_INSTANCE_ID(patch[0], o);
-                return o;
-            }
-
-            half4 Frag(Varyings input) : SV_Target
-            {
-                UNITY_SETUP_INSTANCE_ID(input);
-                uint iid = UNITY_GET_INSTANCE_ID(input);
-                CircleInstanceData inst = LoadInstance(iid);
-                return EvalFragColor(input.patchBary, inst.debugVis, inst.color);
-            }
+            HLSLPROGRAM
+            #define PASS_SHADOW 0
+            #include "Packages/jp.nobnak.circle/Shaders/Includes/CircleInstancedTess.hlsl"
+            #pragma vertex Vert
+            #pragma hull Hull
+            #pragma domain Domain
+            #pragma fragment DepthNormalsFrag
+            #pragma multi_compile_instancing
+            #pragma multi_compile_fragment _ _GBUFFER_NORMALS_OCT
+            #pragma multi_compile _ LOD_FADE_CROSSFADE
+            #include_with_pragmas "Packages/com.unity.render-pipelines.universal/ShaderLibrary/RenderingLayers.hlsl"
             ENDHLSL
         }
     }
